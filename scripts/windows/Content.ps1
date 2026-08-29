@@ -166,10 +166,16 @@ function Invoke-ContentDownload {
             }
         }
 
-        # Phase 2: select everything in one uninterrupted burst, then download.
+        # Phase 2: select everything, then download. A short pause after
+        # each select (no intervening content state query) was necessary:
+        # sending all selects with zero delay was *also* observed (Linux
+        # side live run) to lose every single one -- the console apparently
+        # needs a brief moment to register each selection.
         foreach ($id in $selectedIds) {
             $proc.StandardInput.WriteLine("content select $id")
+            Start-Sleep -Seconds 2
         }
+        Start-Sleep -Seconds 3
 
         $proc.StandardInput.WriteLine('content download')
         Wait-LogIdle -LogFile $LogFile -MinSeconds 5 -MaxSeconds 150

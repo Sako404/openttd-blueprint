@@ -177,24 +177,24 @@
     {
       "name": "Renewed Village Growth",
       "type": "game_script",
-      "content_id": "52455649",
+      "content_id": "49564552",
       "required": true,
       "source": "bananas",
       "version": "12.1",
       "version_policy": "pinned",
       "purpose": "Makes town growth depend on varied, sustained cargo delivery (including FIRS 5 cargos) rather than passenger-service spam alone.",
       "license": "GPL-2.0",
-      "project_url": "https://github.com/F1rrel/RenewedVillageGrowth",
+      "project_url": "https://bananas.openttd.org/package/game-script/52455649",
       "order": 1,
       "parameters": "",
       "dependencies": ["GS SuperLib v40", "GS ToyLib v2", "Script Communication for GS v45"],
       "incompatibilities": [],
-      "notes": "Verified compatible with FIRS 5 via the project's own current readme.txt — BaNaNaS's indexed search summary showed a stale 'up to FIRS 4.3' claim; see docs/RESEARCH.md §4."
+      "notes": "Verified compatible with FIRS 5 via the project's own current readme.txt — BaNaNaS's indexed search summary showed a stale 'up to FIRS 4.3' claim; see docs/RESEARCH.md §4. content_id is intentionally the byte-swapped form of BaNaNaS's own URL id (52455649): the console's live `content state` output reports this same package as 49564552 (verified directly, live), and it's that value the automated download step actually has to match against — see docs/RESEARCH.md §3."
     },
     {
       "name": "RailwAI",
       "type": "ai",
-      "content_id": "52776169",
+      "content_id": "69617752",
       "required": false,
       "source": "bananas",
       "version": "30",
@@ -206,7 +206,7 @@
       "parameters": "",
       "dependencies": [],
       "incompatibilities": [],
-      "notes": "Selected over AdmiralAI/CivilAI/SimpleAI after research (docs/RESEARCH.md §9): AdmiralAI is documented to break (repeated bankruptcy building airports) once infrastructure_maintenance is enabled, which this profile turns on by default; RailwAI's own description covers only trains/road vehicles/ships (no aircraft), sidestepping that whole failure class. More recently updated (2023) than CivilAI (2022, custom/unclear licence) and GPL-3.0 licensed. Not confirmed FIRS-specific-tested by its author, but OpenTTD's AI API is industry/cargo-set agnostic by design, so this is a reasonable, not a certain, compatibility bet — documented as such, not oversold."
+      "notes": "Selected over AdmiralAI/CivilAI/SimpleAI after research (docs/RESEARCH.md §9): AdmiralAI is documented to break (repeated bankruptcy building airports) once infrastructure_maintenance is enabled, which this profile turns on by default; RailwAI's own description covers only trains/road vehicles/ships (no aircraft), sidestepping that whole failure class. More recently updated (2023) than CivilAI (2022, custom/unclear licence) and GPL-3.0 licensed. Not confirmed FIRS-specific-tested by its author, but OpenTTD's AI API is industry/cargo-set agnostic by design, so this is a reasonable, not a certain, compatibility bet — documented as such, not oversold. content_id is intentionally the byte-swapped form of BaNaNaS's own URL id (52776169), verified directly and live against `content state \"RailwAI\"` — same discrepancy as Renewed Village Growth above; see docs/RESEARCH.md §3."
     }
   ]
 }

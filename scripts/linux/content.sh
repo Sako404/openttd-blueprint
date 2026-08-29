@@ -142,11 +142,19 @@ _generate_content_commands() {
 		'.content[] | select((.required == true or (.type == "ai" and $with_ai == 1)) and .source == "bananas") | [.content_id, (if .type == "game_script" then "game" else .type end), .name] | @tsv' \
 		"$manifest")
 
-	# Phase 2: select everything in one uninterrupted burst, then download.
+	# Phase 2: select everything, then download. A short pause after each
+	# select (no intervening `content state` query) was necessary: sending
+	# all selects with zero delay between them was *also* observed, on a
+	# real live run, to lose every single one (0/9 downloaded despite every
+	# ID having resolved correctly) — the console apparently needs a brief
+	# moment to register each selection even without a competing query in
+	# between. See docs/RESEARCH.md §3.
 	local id
 	for id in "${selected_ids[@]+"${selected_ids[@]}"}"; do
 		echo "content select ${id}"
+		sleep 2
 	done
+	sleep 3
 
 	echo "content download"
 	_wait_log_idle "$log_file" 5 180
