@@ -1,4 +1,4 @@
-@{
+﻿@{
     # These three rules are aimed at reusable library cmdlets meant for
     # pipeline composition / PowerShell Gallery distribution. This repo's
     # .ps1 files are either top-level interactive installer scripts (where
