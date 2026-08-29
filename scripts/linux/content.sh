@@ -6,6 +6,19 @@
 # resolved from OpenTTD's own output instead of guessed.
 set -euo pipefail
 
+# _byteswap_hex <8-hex-char-id> — print the same 4 bytes in reverse order.
+# BaNaNaS's own package-page URLs and the downloaded tar's filename always
+# use one canonical byte order for a content ID, but the console's own
+# `content state` listing was observed, live, to report at least Game
+# Script and AI content in the *opposite* byte order for the same package
+# (NewGRF entries matched directly, un-swapped, in every case observed).
+# Rather than assume which types get swapped, callers try both forms when
+# matching a content_state row. See docs/RESEARCH.md §3.
+_byteswap_hex() {
+	local h="$1"
+	echo "${h:6:2}${h:4:2}${h:2:2}${h:0:2}"
+}
+
 # content_tar_path <data_dir> <type> <content_id> — print the path of an
 # already-downloaded content tar for this ID, if present (glob match on the
 # content_id prefix, since the slug/version suffix isn't predictable).
@@ -120,9 +133,10 @@ _generate_content_commands() {
 		# that instead of either wasting time on fast items or truncating
 		# slow ones.
 		_wait_log_idle "$log_file" 10 40
-		# First matching row for this content_id among the lines this
-		# filtered call actually produced (see docs/RESEARCH.md §3 on why
-		# "first match" — the same content_id can appear more than once,
+		# First matching row for this content_id (tried in both byte
+		# orders — see _byteswap_hex above) among the lines this filtered
+		# call actually produced (see docs/RESEARCH.md §3 on why "first
+		# match" — the same content_id can appear more than once,
 		# representing different historical versions).
 		# `|| true` is load-bearing: under `set -euo pipefail`, grep finding
 		# no match (a normal, expected outcome the code below already
@@ -132,7 +146,7 @@ _generate_content_commands() {
 		# Diagnosed via a genuinely stuck live run: the subshell had become
 		# a zombie after resolving only 2 of 9 items, with no error output
 		# anywhere, because set -e's exit is exactly that quiet.
-		numeric_id="$(tail -n "+$((start_line + 1))" "$log_file" | grep -i ", ${content_id}," | head -n1 | awk -F', ' '{print $1}' || true)"
+		numeric_id="$(tail -n "+$((start_line + 1))" "$log_file" | grep -iE ", (${content_id}|$(_byteswap_hex "$content_id"))," | head -n1 | awk -F', ' '{print $1}' || true)"
 		if [[ -n "$numeric_id" ]]; then
 			selected_ids+=("$numeric_id")
 		else

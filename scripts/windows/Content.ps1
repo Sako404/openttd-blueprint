@@ -6,6 +6,21 @@
 # into Windows 10 (1803+)/11 to list a downloaded content archive's
 # contents, exactly as the Linux side uses `tar -tf`.
 
+function Get-ByteSwappedHex {
+    <#
+    .SYNOPSIS
+    Returns the same 4 bytes of an 8-hex-char content ID in reverse order.
+    BaNaNaS's own package-page URLs and the downloaded tar's filename
+    always use one canonical byte order, but the console's own `content
+    state` listing was observed, live, to report at least Game Script and
+    AI content in the *opposite* byte order for the same package (NewGRF
+    entries matched directly, un-swapped, in every case observed). Callers
+    try both forms when matching a content_state row. See docs/RESEARCH.md §3.
+    #>
+    param([Parameter(Mandatory)][string]$Hex)
+    return $Hex.Substring(6, 2) + $Hex.Substring(4, 2) + $Hex.Substring(2, 2) + $Hex.Substring(0, 2)
+}
+
 function Get-ContentTarPath {
     [CmdletBinding()]
     param(
@@ -157,7 +172,8 @@ function Invoke-ContentDownload {
             # truncating slow ones.
             Wait-LogIdle -LogFile $LogFile -MinSeconds 10 -MaxSeconds 40
             $newLines = Get-Content -LiteralPath $LogFile -Encoding UTF8 | Select-Object -Skip $startLine
-            $pattern = ",\s*" + [regex]::Escape($item.content_id) + "\s*,"
+            $swappedId = Get-ByteSwappedHex -Hex $item.content_id
+            $pattern = ",\s*(" + [regex]::Escape($item.content_id) + "|" + [regex]::Escape($swappedId) + ")\s*,"
             $row = $newLines | Where-Object { $_ -imatch $pattern } | Select-Object -First 1
             if ($row -and ($row -match '^(\d+),')) {
                 $selectedIds.Add($Matches[1])
