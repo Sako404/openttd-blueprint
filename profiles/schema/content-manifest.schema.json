@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/openttd-blueprint/schema/content-manifest.schema.json",
+  "title": "OpenTTD Blueprint content manifest",
+  "type": "object",
+  "required": ["schema_version", "profile", "content"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "profile": { "type": "string", "minLength": 1 },
+    "content": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/contentItem" }
+    }
+  },
+  "definitions": {
+    "contentItem": {
+      "type": "object",
+      "required": ["name", "type", "required", "source", "version_policy", "purpose", "license"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "enum": ["newgrf", "game_script", "ai"] },
+        "content_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}$",
+          "description": "BaNaNaS content ID, hex. Omit entirely if source is not bananas."
+        },
+        "required": { "type": "boolean" },
+        "source": { "type": "string", "enum": ["bananas", "none"] },
+        "omitted_reason": {
+          "type": "string",
+          "description": "Required when source is 'none' — why this candidate was researched but not installed."
+        },
+        "version": { "type": "string" },
+        "version_policy": { "type": "string", "enum": ["pinned"] },
+        "expected_filename": { "type": "string" },
+        "purpose": { "type": "string", "minLength": 1 },
+        "license": { "type": "string", "minLength": 1 },
+        "project_url": { "type": "string", "format": "uri" },
+        "order": {
+          "type": "integer",
+          "description": "Load order within this content's type. Lower loads first."
+        },
+        "parameters": {
+          "type": "string",
+          "description": "Verbatim NewGRF parameter string as written to the [newgrf] cfg line. Empty string means reviewed-and-kept-default."
+        },
+        "dependencies": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "incompatibilities": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "notes": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "source": { "const": "bananas" } } },
+          "then": { "required": ["content_id", "version"] }
+        },
+        {
+          "if": { "properties": { "source": { "const": "none" } } },
+          "then": { "required": ["omitted_reason"] }
+        }
+      ]
+    }
+  }
+}
