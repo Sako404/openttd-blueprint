@@ -76,6 +76,42 @@ manually and a required NewGRF stops loading, that manual change is the
 cause — check `content-manifest.json`'s `incompatibilities` field for the
 item, and OpenTTD's own startup log for the exact NewGRF error text.
 
+## Occasional stutters / brief freezes during play
+
+Most likely cause: CargoDist (Link Graph). The `logistics` profile
+deliberately turns `linkgraph.distribution_pax`/`distribution_mail` to
+Symmetric and `distribution_armoured`/`distribution_default` to Asymmetric
+(engine default is Manual for all four — see `docs/RESEARCH.md` §6). Under
+Manual, the engine never runs the link-graph solver at all; under
+Symmetric/Asymmetric it does, on a schedule controlled by two settings the
+profile leaves at their engine defaults (verified against
+`src/table/settings/linkgraph_settings.ini`, `OpenTTD/OpenTTD` on GitHub):
+
+- `linkgraph.recalc_interval` — default `8`: recalculate the graph every 8
+  in-game days.
+- `linkgraph.recalc_time` — default `32`: spread that recalculation over
+  32 in-game days in a background thread.
+- `linkgraph.accuracy` — default `16` (range 2-64): higher is more precise
+  and more expensive.
+
+The recalculation itself runs off the main thread, but on a busy network —
+FIRS's industry chains and Iron Horse's large vehicle roster both push the
+graph size up — the periodic sync back to the main thread can still be
+felt as a brief stutter, roughly every 8 in-game days. This was observed
+live on 2026-08-29: a direct CPU comparison at the main menu between
+vanilla OpenTTD (no content) and the same machine with the `logistics`
+profile loaded showed ~15-20% CPU vanilla vs. ~36-47% with the profile,
+even before any player-built network existed — confirming the added
+content itself (not a general OpenTTD/hardware issue) drives the extra
+load that the link-graph recalculation then periodically spends.
+
+This is a deliberate profile trade-off (CargoDist is central to
+"logistics"), not an installer bug. If the stutters are disruptive, no
+reinstall is needed — adjust it in-game: **Settings → Advanced Settings →
+Environment → Cargo Distribution**. Lowering `accuracy` makes each
+recalculation cheaper; raising `recalc_interval` makes it happen less
+often. Both trade routing precision for smoothness.
+
 ## Windows: "running scripts is disabled on this system"
 
 PowerShell's default execution policy blocks unsigned local scripts. Don't
