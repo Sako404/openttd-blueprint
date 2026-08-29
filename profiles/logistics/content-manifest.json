@@ -37,7 +37,7 @@
       "notes": "Current actively-maintained generation (4), superseding the Iron Horse 3 originally suggested — see docs/RESEARCH.md."
     },
     {
-      "name": "Road Hog",
+      "name": "Road Hog (Buses, Trucks, Trams)",
       "type": "newgrf",
       "content_id": "9787eafe",
       "required": true,
@@ -51,7 +51,7 @@
       "parameters": "",
       "dependencies": ["FIRS Industries 5"],
       "incompatibilities": [],
-      "notes": "Feature-complete, unmaintained since 2018; still the strongest available FIRS-aware road set."
+      "notes": "Feature-complete, unmaintained since 2018; still the strongest available FIRS-aware road set. Manifest 'name' deliberately uses the full BaNaNaS title (not just 'Road Hog') — the short form is a common substring that matches 50+ unrelated roadtype packages in `content state`, which was observed to make the filtered query dramatically slower; see docs/RESEARCH.md §3."
     },
     {
       "name": "SHARK",
