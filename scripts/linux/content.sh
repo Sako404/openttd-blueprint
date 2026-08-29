@@ -105,7 +105,15 @@ _generate_content_commands() {
 		# filtered call actually produced (see docs/RESEARCH.md §3 on why
 		# "first match" — the same content_id can appear more than once,
 		# representing different historical versions).
-		numeric_id="$(tail -n "+$((start_line + 1))" "$log_file" | grep -i ", ${content_id}," | head -n1 | awk -F', ' '{print $1}')"
+		# `|| true` is load-bearing: under `set -euo pipefail`, grep finding
+		# no match (a normal, expected outcome the `if` below already
+		# handles) makes the whole pipeline "fail", which would otherwise
+		# kill this entire subshell via `set -e` before it reaches that
+		# check — silently aborting mid-manifest with no error visible.
+		# Diagnosed via a genuinely stuck live run: the subshell had become
+		# a zombie after resolving only 2 of 9 items, with no error output
+		# anywhere, because set -e's exit is exactly that quiet.
+		numeric_id="$(tail -n "+$((start_line + 1))" "$log_file" | grep -i ", ${content_id}," | head -n1 | awk -F', ' '{print $1}' || true)"
 		if [[ -n "$numeric_id" ]]; then
 			echo "content select ${numeric_id}"
 		else
