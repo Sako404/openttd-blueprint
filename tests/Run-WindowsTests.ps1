@@ -132,6 +132,14 @@ try {
     Copy-Item -LiteralPath (Join-Path $Fixtures 'sample-openttd.cfg') -Destination $spaceCfg
     Assert-Success 'Set-IniBlock works with spaces in path' { Set-IniBlock -Path $spaceCfg -Section 'linkgraph' -MarkerId 'profile: test, section: linkgraph' -BlockLines $blockLines }
 
+    Write-Host '== -IncludeAi manifest filtering (logistics profile) =='
+    $logisticsManifest = Test-ContentManifest -Path (Join-Path $BpRoot 'profiles\logistics\content-manifest.json')
+    $withoutAi = Get-RequiredContent -Manifest $logisticsManifest
+    $withAi = Get-RequiredContent -Manifest $logisticsManifest -IncludeAi
+    Assert-Success 'RailwAI excluded by default (no -IncludeAi)' { if (($withoutAi | Where-Object { $_.name -eq 'RailwAI' })) { throw 'RailwAI should not be present' } }
+    Assert-Success 'RailwAI included with -IncludeAi' { if (-not ($withAi | Where-Object { $_.name -eq 'RailwAI' })) { throw 'RailwAI should be present' } }
+    Assert-Eq '-IncludeAi adds exactly one item to the selection' ($withoutAi.Count + 1) $withAi.Count
+
 } finally {
     Remove-Item -Recurse -Force $WorkDir -ErrorAction SilentlyContinue
 }

@@ -77,15 +77,18 @@ function Get-RequiredContent {
     <#
     .SYNOPSIS
     Returns required, bananas-sourced content items from a parsed manifest,
-    optionally filtered by Type, sorted by their `order` field.
+    optionally filtered by Type, sorted by their `order` field. Pass
+    -IncludeAi to also include optional `ai`-type items (opt-in via
+    -WithAI on install-windows.ps1 — off by default).
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]$Manifest,
-        [string]$Type
+        [string]$Type,
+        [switch]$IncludeAi
     )
     $items = $Manifest.content | Where-Object {
-        $_.required -eq $true -and $_.source -eq 'bananas' -and (-not $Type -or $_.type -eq $Type)
+        ($_.required -eq $true -or ($IncludeAi -and $_.type -eq 'ai')) -and $_.source -eq 'bananas' -and (-not $Type -or $_.type -eq $Type)
     }
     return @($items | Sort-Object order)
 }

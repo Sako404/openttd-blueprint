@@ -190,6 +190,23 @@
       "dependencies": ["GS SuperLib v40", "GS ToyLib v2", "Script Communication for GS v45"],
       "incompatibilities": [],
       "notes": "Verified compatible with FIRS 5 via the project's own current readme.txt — BaNaNaS's indexed search summary showed a stale 'up to FIRS 4.3' claim; see docs/RESEARCH.md §4."
+    },
+    {
+      "name": "RailwAI",
+      "type": "ai",
+      "content_id": "52776169",
+      "required": false,
+      "source": "bananas",
+      "version": "30",
+      "version_policy": "pinned",
+      "purpose": "Optional single AI opponent, installed only when the user explicitly opts in (--with-ai / -WithAI). Not installed or activated by default.",
+      "license": "GPL-3.0",
+      "project_url": "https://bananas.openttd.org/package/ai/52776169",
+      "order": 0,
+      "parameters": "",
+      "dependencies": [],
+      "incompatibilities": [],
+      "notes": "Selected over AdmiralAI/CivilAI/SimpleAI after research (docs/RESEARCH.md §9): AdmiralAI is documented to break (repeated bankruptcy building airports) once infrastructure_maintenance is enabled, which this profile turns on by default; RailwAI's own description covers only trains/road vehicles/ships (no aircraft), sidestepping that whole failure class. More recently updated (2023) than CivilAI (2022, custom/unclear licence) and GPL-3.0 licensed. Not confirmed FIRS-specific-tested by its author, but OpenTTD's AI API is industry/cargo-set agnostic by design, so this is a reasonable, not a certain, compatibility bet — documented as such, not oversold."
     }
   ]
 }

@@ -143,6 +143,28 @@ assert_eq "state records profile" "test" "$profile_field"
 added_field="$(read_state_field "$STATE_FILE" '.content_added_by_install[0]')"
 assert_eq "state records added content" "Added Thing" "$added_field"
 
+echo "== --with-ai manifest filtering (logistics profile) =="
+LOGISTICS_MANIFEST="${BP_ROOT}/profiles/logistics/content-manifest.json"
+without_ai_names="$(jq -r --argjson with_ai 0 \
+	'.content[] | select((.required == true or (.type == "ai" and $with_ai == 1)) and .source == "bananas") | .name' \
+	"$LOGISTICS_MANIFEST")"
+with_ai_names="$(jq -r --argjson with_ai 1 \
+	'.content[] | select((.required == true or (.type == "ai" and $with_ai == 1)) and .source == "bananas") | .name' \
+	"$LOGISTICS_MANIFEST")"
+if echo "$without_ai_names" | grep -qxF "RailwAI"; then
+	fail "RailwAI must NOT be selected without --with-ai"
+else
+	pass "RailwAI excluded by default (no --with-ai)"
+fi
+if echo "$with_ai_names" | grep -qxF "RailwAI"; then
+	pass "RailwAI included with --with-ai"
+else
+	fail "RailwAI must be selected when --with-ai is set"
+fi
+without_count="$(echo "$without_ai_names" | grep -c .)"
+with_count="$(echo "$with_ai_names" | grep -c .)"
+assert_eq "with-ai adds exactly one item to the selection" "$((without_count + 1))" "$with_count"
+
 echo
 echo "== dry-run makes no writes (real installer, throwaway fixture profile) =="
 DRYRUN_HOME="${WORKDIR}/home"
