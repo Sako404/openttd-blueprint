@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "profile": "test",
+  "content": [
+    {
+      "name": "Missing content_id",
+      "type": "newgrf",
+      "required": true,
+      "source": "bananas",
+      "version_policy": "pinned",
+      "purpose": "Missing content_id despite bananas source",
+      "license": "GPL-2.0"
+    }
+  ]
+}

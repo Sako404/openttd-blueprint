@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "name": "test",
+  "display_name": "Test",
+  "description": "Missing blueprint_version and openttd_min_version."
+}

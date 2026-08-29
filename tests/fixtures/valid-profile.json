@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "name": "test",
+  "display_name": "Test",
+  "description": "Fixture profile for tests.",
+  "blueprint_version": "0.1.0",
+  "openttd_min_version": "14.0",
+  "gameplay": {
+    "starting_year": 1950,
+    "map_size": { "x": 10, "y": 10 }
+  }
+}

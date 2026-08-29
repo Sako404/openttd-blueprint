@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "profile": "test",
+  "content": [
+    {
+      "name": "Example NewGRF",
+      "type": "newgrf",
+      "content_id": "abcd1234",
+      "required": true,
+      "source": "bananas",
+      "version": "1.0.0",
+      "version_policy": "pinned",
+      "purpose": "Example for tests",
+      "license": "GPL-2.0",
+      "order": 10,
+      "parameters": "1 2 3"
+    },
+    {
+      "name": "Example Omitted",
+      "type": "newgrf",
+      "required": false,
+      "source": "none",
+      "version_policy": "pinned",
+      "purpose": "Example omitted candidate",
+      "license": "unspecified",
+      "omitted_reason": "Not needed for the test fixture.",
+      "order": 0
+    }
+  ]
+}
