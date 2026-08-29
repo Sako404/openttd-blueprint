@@ -11,7 +11,13 @@ set -euo pipefail
 # content_id prefix, since the slug/version suffix isn't predictable).
 content_tar_path() {
 	local data_dir="$1" type="$2" content_id="$3" match
-	match="$(find "${data_dir}/content_download/${type}" -maxdepth 1 -type f -iname "${content_id}-*.tar" 2>/dev/null | head -n1)"
+	# `|| true`: find exits non-zero if the target directory doesn't exist
+	# yet (e.g. content_download/<type>/ before anything of that type has
+	# ever been downloaded) — under set -e that would otherwise be treated
+	# as fatal instead of the normal "nothing found yet" this function is
+	# meant to report. See the near-identical, confirmed-live-observed bug
+	# this same lesson came from further down in this file (numeric_id).
+	match="$(find "${data_dir}/content_download/${type}" -maxdepth 1 -type f -iname "${content_id}-*.tar" 2>/dev/null | head -n1 || true)"
 	[[ -n "$match" ]] && echo "$match"
 }
 
