@@ -87,7 +87,14 @@ _generate_content_commands() {
 			continue
 		fi
 		start_line="$(wc -l <"$log_file" 2>/dev/null || echo 0)"
-		echo "content state ${item_name}"
+		# The console splits an unquoted argument on whitespace — an
+		# unquoted multi-word filter (e.g. "Road Hog (Buses, Trucks,
+		# Trams)") was observed to effectively match on just one generic
+		# word ("Road"), returning dozens of unrelated packages instead of
+		# one. Quoting the whole filter gives an exact-substring match
+		# instead (verified empirically: `content state "Road Hog..."`
+		# returns exactly one row). See docs/RESEARCH.md §3.
+		echo "content state \"${item_name}\""
 		# Round-trip time for a single filtered query varies a lot in
 		# practice (a few seconds to tens of seconds, observed empirically)
 		# — idle-detection per item, rather than a fixed sleep, adapts to

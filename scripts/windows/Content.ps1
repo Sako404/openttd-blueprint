@@ -134,7 +134,12 @@ function Invoke-ContentDownload {
             $type = if ($item.type -eq 'game_script') { 'game' } else { $item.type }
             if (Test-ContentPresent -DataDir $DataDir -Type $type -ContentId $item.content_id) { continue }
             $startLine = (Get-Content -LiteralPath $LogFile -Encoding UTF8 | Measure-Object -Line).Lines
-            $proc.StandardInput.WriteLine("content state $($item.name)")
+            # The console splits an unquoted argument on whitespace — an
+            # unquoted multi-word filter was observed (Linux side testing)
+            # to effectively match on just one generic word, returning
+            # dozens of unrelated packages instead of one. Quoting the
+            # whole filter gives an exact-substring match instead.
+            $proc.StandardInput.WriteLine("content state `"$($item.name)`"")
             # Round-trip time for a single filtered query varies a lot in
             # practice (verified on the Linux side) — idle-detection per
             # item adapts instead of wasting time on fast items or
