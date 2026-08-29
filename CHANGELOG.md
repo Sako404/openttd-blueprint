@@ -28,3 +28,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (PSScriptAnalyzer + tests).
 - Documentation: README, RESEARCH, MODS, CONFIGURATION, ARCHITECTURE,
   TROUBLESHOOTING, SAVE_COMPATIBILITY.
+
+### Fixed
+
+- NewGRFs downloaded via the content system were left packed inside their
+  `content_download/newgrf/*.tar`, where OpenTTD's plain-filename `[newgrf]`
+  resolution cannot find them; the installer now extracts each `.grf` into
+  a loose file under `newgrf/`.
+- Multi-word `[game_scripts]`/`[ai_players]` keys (e.g. `Renewed Village
+  Growth`) were silently truncated at the first space by OpenTTD's ini
+  parser; such keys are now quoted.
+- `economy.inflation = true` conflicts with the required Iron Horse NewGRF
+  (fatal error on load); `inflation` now stays at the engine default
+  (`false`). See `docs/RESEARCH.md` §5 "Stability check" for how all three
+  were found — a live `openttd -D -x` run against the installed config,
+  not just the installer's own dry-run/verify/idempotency checks.
