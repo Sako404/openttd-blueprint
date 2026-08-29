@@ -110,3 +110,24 @@ has been played and validated.
 Left at the script's own defaults for v0.1.0 — see
 `docs/MODS.md` "Game Script parameters" for why, and what's tracked as a
 follow-up.
+
+## Optional AI opponent (`--with-ai` / `-WithAI`)
+
+Off by default — the default profile is designed around a human player's
+network planning, not competition. When enabled, two things change beyond
+just downloading RailwAI (see `docs/MODS.md`):
+
+- `difficulty.max_no_competitors = 1` — allows exactly one AI-controlled
+  company to be created. Left at the engine default (`0`, no AI
+  companies) otherwise.
+- `[ai_players]` gets `none =` for company slot 0 (the human player) and
+  `RailwAI =` for slot 1, so the next new game starts with that AI already
+  assigned rather than requiring manual selection in the New Game screen.
+
+Both live inside the same marked, Blueprint-owned blocks as everything
+else (`docs/ARCHITECTURE.md` "Config ownership") — running the installer
+again without `--with-ai`/`-WithAI` does not remove them (content and
+config additions are never silently rolled back — see "Existing content
+handling" in the project brief / `docs/ARCHITECTURE.md` "Additive
+content"); use `uninstall-linux.sh`/`uninstall-windows.ps1` to restore a
+prior backup if you want to turn it back off.

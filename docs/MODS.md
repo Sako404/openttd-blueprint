@@ -107,3 +107,30 @@ project's own readme for the full list). Reviewing and tuning these is
 tracked as a follow-up rather than blocking v0.1.0 on tuning every knob of
 a script whose defaults are already designed to be sensible; any change
 will be documented here when made.
+
+## Optional AI opponent (`--with-ai` / `-WithAI`)
+
+Not installed by default. Pass `--with-ai` (Linux) or `-WithAI` (Windows)
+to pin one AI opponent to a company slot:
+
+| Content | Type | Version | Purpose | Source | License |
+| --- | --- | --- | --- | --- | --- |
+| RailwAI | AI | 30 | Optional single opponent | BaNaNaS `52776169` | GPL-3.0 |
+
+Selected over AdmiralAI (documented to repeatedly build airports and go
+bankrupt once infrastructure maintenance is enabled — a direct conflict
+with this profile's default economy settings), CivilAI (no release since
+January 2022, unclear/custom licence), and SimpleAI (same maintenance-cost
+failure class as AdmiralAI unless manually reconfigured to drop
+aircraft). RailwAI's own description covers only trains, road vehicles
+and ships — no aircraft at all — which avoids that whole failure class
+structurally. Full comparison and source verification:
+`docs/RESEARCH.md` §9.
+
+Not confirmed as explicitly FIRS-tested by its author (no AI candidate
+found was) — OpenTTD's AI scripting API is industry/cargo-set agnostic by
+design, so baseline compatibility is expected but not a verified
+guarantee. When enabled, the installer also sets
+`difficulty.max_no_competitors = 1` (an AI pinned to a company slot has no
+effect if the game isn't allowed to create that company at all) — see
+`docs/CONFIGURATION.md`.

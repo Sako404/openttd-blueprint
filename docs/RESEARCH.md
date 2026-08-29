@@ -311,3 +311,59 @@ and `src/settings_type.h` enum definitions:
   read older state), but downgrading is not supported by GameScript
   semantics in general.
 - Full detail and a pre-flight checklist live in `docs/SAVE_COMPATIBILITY.md`.
+
+## 9. AI opponent (optional, `--with-ai` / `-WithAI`)
+
+Added after the initial v0.1.0 build, as a scoped, opt-in addition — off
+by default, using the same manifest/versioning/download architecture as
+every other content item (§3–§5), never a custom or hand-written AI.
+
+**Candidates evaluated** (via BaNaNaS package pages, the outdated-but-
+still-useful wiki "Comparison of AIs" page, and community discussion
+threads — no single current, authoritative "best AI" source exists, so
+this drew on more, individually weaker sources than the NewGRF research
+above, and is flagged as such):
+
+| AI | Latest version | License | Last released | Notes |
+|---|---|---|---|---|
+| AdmiralAI | — | — | — | **Rejected.** Multiple independent sources describe it repeatedly building airports and going bankrupt once infrastructure maintenance costs are enabled — this profile turns `economy.infrastructure_maintenance` on by default (§7), so this is a direct, known conflict, not a hypothetical one. |
+| CivilAI | 37 | Custom (author "Pikka") | 2022-01-09 | General-purpose, all transport types. No maintenance-cost issue found, but no release since Jan 2022 and a non-standard/unclear licence — weaker footing than RailwAI on both maintenance recency and licensing clarity. |
+| SimpleAI | — | — | — | Described as basic/stable/light, closest to the original TTD AI — but sources note it also needs manual reconfiguration (disable aircraft) to survive infrastructure maintenance, i.e. the same failure class as AdmiralAI unless tuned. |
+| **RailwAI** (selected) | 30 | GPL-3.0 | 2023-05-12 | Trains/road vehicles/ships only — no aircraft mentioned in its own description at all, which sidesteps the airport-bankruptcy failure class structurally rather than needing configuration to avoid it. More recently released than CivilAI, and clearly GPL-3.0 licensed. BaNaNaS content ID `52776169`. |
+
+**Decision:** RailwAI, content ID `52776169`, version 30. Not confirmed as
+explicitly "FIRS-tested" by its author — no candidate found was. OpenTTD's
+AI scripting API is industry/cargo-set agnostic by design (an AI queries
+live game state for available cargos/industries rather than hardcoding a
+specific NewGRF), so baseline functionality alongside FIRS is expected,
+but this is a reasonable inference, not a verified claim — documented as
+such in `docs/MODS.md`, not oversold.
+
+**Activation mechanism**, verified directly against OpenTTD source
+(`src/settings.cpp: AILoadConfig`/`AISaveConfig`, same file already used
+for §5's `[newgrf]` verification): `[ai_players]` holds one INI item per
+company slot, in file order — `AILoadConfig` walks `group->items` in
+sequence, calling `AIConfig::Change(item.name)` for company slot 0, then
+1, then 2, and so on. The item's **key** is the AI's registered short
+name (found the same way as a Game Script's — §5/`resolve_ai_name`,
+matching against `openttd -h`'s "List of AIs:" listing), the **value** is
+its settings string (empty = author defaults). Slot 0 is conventionally
+the human player in a single-player game, so the installer writes
+`none =` first (explicitly clearing/skipping that slot) then the AI's
+name for slot 1.
+
+Pinning an AI to a slot has no visible effect unless
+`difficulty.max_no_competitors` (default 0 — verified against
+`src/table/settings/difficulty_settings.ini`) allows at least that many
+AI companies to actually spawn — `--with-ai`/`-WithAI` therefore also
+sets `max_no_competitors = 1` alongside the `[ai_players]` block, both
+within the installer's own owned/marked blocks (§ "Config ownership" in
+`docs/ARCHITECTURE.md`).
+
+**Scope note:** this was not independently live-download-tested to the
+same depth as the core NewGRF/GameScript stack (§3's live validation) —
+the download/select/resolve mechanism is identical and already proven
+correct for other `ai`-type-shaped entries in the content catalog, but a
+full in-game confirmation that RailwAI actually appears as a playable
+opponent was not performed in this session. Treat as implemented and
+architecturally consistent, not exhaustively play-tested.

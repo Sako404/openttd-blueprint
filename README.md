@@ -95,6 +95,19 @@ console content protocol has to sync a large catalog before it can select
 individual packages; see `docs/RESEARCH.md` §3). Progress is printed as it
 happens; re-running the installer skips anything already downloaded.
 
+### Optional AI opponent
+
+```bash
+./install-linux.sh --with-ai      # Linux
+```
+```powershell
+.\install-windows.ps1 -WithAI     # Windows
+```
+
+Off by default. Adds one AI opponent (RailwAI) pinned to a company slot —
+see `docs/MODS.md` and `docs/CONFIGURATION.md` for why it was chosen and
+exactly what changes.
+
 ## Dry run
 
 ```bash

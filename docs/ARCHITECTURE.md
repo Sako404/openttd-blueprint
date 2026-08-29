@@ -122,18 +122,42 @@ they read this file rather than re-deriving "what did we do" from scratch.
 ## Download mechanism
 
 Full detail and rationale: `docs/RESEARCH.md` §3. Summary: OpenTTD's
-console `content` command family (`content update` / `content select <id>`
-/ `content download`) is the only mechanism used — no BaNaNaS scraping, no
-unofficial mirrors. It's driven non-interactively by launching
-`openttd -D -x` (dedicated server, never-save-config) and piping the
-command sequence to its stdin, capturing output to a log the installer can
-show on failure or in `--dry-run` (dry-run stops before actually invoking
-this — see below). `content download` only fetches files; it does not
-touch `openttd.cfg`. The installer resolves each item's real `[newgrf]`
-filename afterwards by listing the downloaded tar's contents (see "Profile
-design" above), and only then patches `openttd.cfg`. This keeps content
-acquisition and config mutation as separate, individually-verifiable
-steps, per "Transaction-like installation" below.
+console `content` command family (`content update` / `content state
+[filter]` / `content select <id>` / `content download`) is the only
+mechanism used — no BaNaNaS scraping, no unofficial mirrors. It's driven
+non-interactively by launching `openttd -D -x` (dedicated server,
+never-save-config) and writing the command sequence to its stdin,
+interleaved with real-time waits, capturing output to a log the installer
+can show on failure or in `--dry-run` (dry-run stops before actually
+invoking this — see below).
+
+Two behaviours only surfaced through live testing against the real
+content server, not from documentation, and materially shaped this design
+— see `docs/RESEARCH.md` §3 for the evidence:
+
+- `content select` takes the *numeric* ID shown by `content state`, not
+  BaNaNaS's stable hex content ID — so each install run has to look that
+  numeric ID up freshly (it isn't stable across runs) rather than caching it.
+- An **unfiltered** `content state` prints OpenTTD's entire catalog (tens
+  of thousands of items) and, worse, was observed to sometimes leave the
+  dedicated server too busy digesting that output to reliably process the
+  `content select`/`content download` commands sent after it. `content
+  state <filter>` narrows the listing to just matching names, which is
+  both far faster and reliably lets subsequent commands through — so the
+  installer issues one filtered `content state <item name>` per required
+  item instead of one bulk unfiltered call.
+
+`content download` only fetches files; it does not touch `openttd.cfg`.
+The installer resolves each item's real `[newgrf]` filename afterwards by
+listing the downloaded tar's contents (see "Profile design" above), and
+only then patches `openttd.cfg`. This keeps content acquisition and config
+mutation as separate, individually-verifiable steps, per "Transaction-like
+installation" below.
+
+A full first-time sync of 9 items has been observed to take several
+minutes end to end (each filtered query's own round-trip varies from a
+few seconds to tens of seconds) — the installer waits generously and
+prints progress context rather than assuming this is fast.
 
 ## Backup strategy
 
