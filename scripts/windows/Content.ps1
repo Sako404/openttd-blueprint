@@ -77,7 +77,8 @@ function Invoke-ContentDownload {
         [Parameter(Mandatory)][string]$Executable,
         [Parameter(Mandatory)]$Manifest,
         [Parameter(Mandatory)][string]$LogFile,
-        [Parameter(Mandatory)][string]$DataDir
+        [Parameter(Mandatory)][string]$DataDir,
+        [switch]$WithAi
     )
 
     Set-Content -LiteralPath $LogFile -Value @() -Encoding UTF8
@@ -113,31 +114,44 @@ function Invoke-ContentDownload {
         # before the first command avoids the race.
         Start-Sleep -Seconds 2
         $proc.StandardInput.WriteLine('content update')
-        $proc.StandardInput.WriteLine('content state')
-        # `content update` and `content state` share one persistent
-        # connection that only reports "closed" at final shutdown, not
-        # after each subcommand (verified on the Linux side) — wait
-        # generously for the full catalog listing (thousands of lines) to
-        # go idle before reading it; a premature read silently misses
-        # whichever packages hadn't been printed yet.
-        Wait-LogIdle -LogFile $LogFile -MinSeconds 10 -MaxSeconds 120
+        # `content update` is a silent background fetch of the server's
+        # full catalog (observed: tens of thousands of items) with no
+        # documented completion signal — wait a fixed, empirically-generous
+        # duration rather than idle-polling (verified on the Linux side:
+        # `content state` issued once this has settled returns complete,
+        # correct results).
+        Start-Sleep -Seconds 60
 
-        $required = Get-RequiredContent -Manifest $Manifest
+        # `content state <filter>` narrows the listing to just matching
+        # names instead of dumping the entire catalog — verified
+        # empirically (Linux side) to be far faster and more reliable: an
+        # *unfiltered* `content state` was observed to sometimes leave the
+        # dedicated server too busy digesting its own multi-thousand-line
+        # output to reliably process the commands that followed. One
+        # filtered call per required item avoids that entirely.
+        $required = Get-RequiredContent -Manifest $Manifest -IncludeAi:$WithAi
         foreach ($item in $required) {
             $type = if ($item.type -eq 'game_script') { 'game' } else { $item.type }
             if (Test-ContentPresent -DataDir $DataDir -Type $type -ContentId $item.content_id) { continue }
-            $logLines = Get-Content -LiteralPath $LogFile -Encoding UTF8
+            $startLine = (Get-Content -LiteralPath $LogFile -Encoding UTF8 | Measure-Object -Line).Lines
+            $proc.StandardInput.WriteLine("content state $($item.name)")
+            # Round-trip time for a single filtered query varies a lot in
+            # practice (verified on the Linux side) — idle-detection per
+            # item adapts instead of wasting time on fast items or
+            # truncating slow ones.
+            Wait-LogIdle -LogFile $LogFile -MinSeconds 10 -MaxSeconds 40
+            $newLines = Get-Content -LiteralPath $LogFile -Encoding UTF8 | Select-Object -Skip $startLine
             $pattern = ",\s*" + [regex]::Escape($item.content_id) + "\s*,"
-            $row = $logLines | Where-Object { $_ -imatch $pattern } | Select-Object -First 1
+            $row = $newLines | Where-Object { $_ -imatch $pattern } | Select-Object -First 1
             if ($row -and ($row -match '^(\d+),')) {
                 $proc.StandardInput.WriteLine("content select $($Matches[1])")
             } else {
-                Write-Warning "content_id $($item.content_id) not found in content state — server may not have it"
+                Write-Warning "content_id $($item.content_id) not found via 'content state $($item.name)' — server may not have it"
             }
         }
 
         $proc.StandardInput.WriteLine('content download')
-        Wait-LogIdle -LogFile $LogFile -MinSeconds 5 -MaxSeconds 300
+        Wait-LogIdle -LogFile $LogFile -MinSeconds 5 -MaxSeconds 150
         $proc.StandardInput.WriteLine('quit')
         # A dedicated server (-D) is designed to run indefinitely and does
         # not reliably exit on "quit" (verified empirically on the Linux
@@ -151,10 +165,13 @@ function Invoke-ContentDownload {
     }
 
     $missing = 0
-    foreach ($item in (Get-RequiredContent -Manifest $Manifest)) {
+    foreach ($item in (Get-RequiredContent -Manifest $Manifest -IncludeAi:$WithAi)) {
         $type = if ($item.type -eq 'game_script') { 'game' } else { $item.type }
         if (-not (Test-ContentPresent -DataDir $DataDir -Type $type -ContentId $item.content_id)) {
-            Write-Error "MISSING after download: $($item.name) ($type $($item.content_id))"
+            # Not Write-Error: callers run under $ErrorActionPreference =
+            # 'Stop', where the first Write-Error would abort this loop
+            # before the remaining items are even checked.
+            Write-Warning "MISSING after download: $($item.name) ($type $($item.content_id))"
             $missing++
         }
     }
@@ -175,17 +192,25 @@ function Resolve-NewgrfFilename {
     return (Split-Path -Leaf $grf)
 }
 
-function Resolve-GameScriptName {
+function Resolve-RegisteredName {
+    <#
+    .SYNOPSIS
+    Shared by Resolve-GameScriptName/Resolve-AiName: prints the registered
+    short name OpenTTD uses for downloaded content, found by fuzzy-matching
+    a manifest item's display name against a named section of `openttd -h`
+    output (e.g. "List of Game Scripts:", "List of AIs:").
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$Executable,
+        [Parameter(Mandatory)][string]$Heading,
         [Parameter(Mandatory)][string]$DisplayName
     )
     $needle = $DisplayName -replace ' ', ''
     $output = & $Executable -h 2>&1
     $inSection = $false
     foreach ($line in $output) {
-        if ($line -match '^List of Game Scripts:') { $inSection = $true; continue }
+        if ($line -eq $Heading) { $inSection = $true; continue }
         if ($inSection -and $line -match '^List of ') { break }
         if ($inSection -and $line.Trim()) {
             $token = ($line -split ' \(v')[0]
@@ -195,6 +220,24 @@ function Resolve-GameScriptName {
         }
     }
     return $null
+}
+
+function Resolve-GameScriptName {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Executable,
+        [Parameter(Mandatory)][string]$DisplayName
+    )
+    return Resolve-RegisteredName -Executable $Executable -Heading 'List of Game Scripts:' -DisplayName $DisplayName
+}
+
+function Resolve-AiName {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Executable,
+        [Parameter(Mandatory)][string]$DisplayName
+    )
+    return Resolve-RegisteredName -Executable $Executable -Heading 'List of AIs:' -DisplayName $DisplayName
 }
 
 function Build-NewgrfLines {
@@ -231,4 +274,27 @@ function Build-GameScriptLine {
         throw "Build-GameScriptLine: could not resolve registered name for '$($gs.name)'"
     }
     return @("$scriptName =")
+}
+
+function Build-AiPlayersLines {
+    <#
+    .SYNOPSIS
+    Prints the "[ai_players]" lines that pin the manifest's optional AI
+    opponent to a company slot, or an empty array if none is present. Only
+    call this when the user opted in (-WithAI) — see
+    scripts/linux/content.sh build_ai_players_lines for the source-verified
+    slot-ordering rationale (slot 0 = human/"none", slot 1 = the AI).
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Executable,
+        [Parameter(Mandatory)]$Manifest
+    )
+    $ai = $Manifest.content | Where-Object { $_.type -eq 'ai' -and $_.source -eq 'bananas' } | Select-Object -First 1
+    if (-not $ai) { return @() }
+    $aiName = Resolve-AiName -Executable $Executable -DisplayName $ai.name
+    if (-not $aiName) {
+        throw "Build-AiPlayersLines: could not resolve registered name for '$($ai.name)'"
+    }
+    return @('none =', "$aiName =")
 }

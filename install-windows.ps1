@@ -16,15 +16,21 @@ Check that the profile is installed and consistent; make no changes.
 .PARAMETER Profile
 Profile name (default: logistics).
 
+.PARAMETER WithAI
+Pin one optional AI opponent to a company slot. Off by default — see
+docs/CONFIGURATION.md.
+
 .EXAMPLE
 .\install-windows.ps1 -DryRun
 .\install-windows.ps1
 .\install-windows.ps1 -Verify
+.\install-windows.ps1 -WithAI
 #>
 [CmdletBinding()]
 param(
     [switch]$DryRun,
     [switch]$Verify,
+    [switch]$WithAI,
     [string]$Profile = 'logistics'
 )
 
@@ -95,11 +101,11 @@ $StateFile = Join-Path $configDir 'blueprint-state.json'
 function Initialize-ConfigSkeleton {
     New-Item -ItemType Directory -Force -Path $configDir | Out-Null
     if (-not (Test-Path -LiteralPath $configFile)) {
-        @('[difficulty]', '', '[economy]', '', '[vehicle]', '', '[linkgraph]', '', '[game_creation]', '', '[newgrf]', '', '[game_scripts]') |
+        @('[difficulty]', '', '[economy]', '', '[vehicle]', '', '[linkgraph]', '', '[game_creation]', '', '[newgrf]', '', '[game_scripts]', '', '[ai_players]') |
             Set-Content -LiteralPath $configFile -Encoding UTF8
     }
     $existing = Get-Content -LiteralPath $configFile -Encoding UTF8
-    foreach ($section in @('difficulty', 'economy', 'vehicle', 'linkgraph', 'game_creation', 'newgrf', 'game_scripts')) {
+    foreach ($section in @('difficulty', 'economy', 'vehicle', 'linkgraph', 'game_creation', 'newgrf', 'game_scripts', 'ai_players')) {
         if (-not ($existing -ccontains "[$section]")) {
             Add-Content -LiteralPath $configFile -Value @('', "[$section]") -Encoding UTF8
             $existing = Get-Content -LiteralPath $configFile -Encoding UTF8
@@ -117,6 +123,14 @@ function Get-PatchedConfig {
         $bodyFile = Join-Path $splitDir "$section.body"
         if (-not (Test-Path -LiteralPath $bodyFile)) { continue }
         $blockLines = @(Get-Content -LiteralPath $bodyFile -Encoding UTF8)
+        if ($section -eq 'difficulty' -and $WithAI) {
+            # -WithAI needs at least one competitor slot enabled, or the
+            # [ai_players] pin below has no effect (max_no_competitors=0
+            # means no AI companies get created regardless of what's
+            # pinned to a slot — verified against OpenTTD's own settings
+            # table, docs/RESEARCH.md §9).
+            $blockLines = $blockLines + 'max_no_competitors = 1'
+        }
         Set-IniBlock -Path $OutPath -Section $section -MarkerId "profile: $Profile, section: $section" -BlockLines $blockLines
     }
     Remove-Item -Recurse -Force $splitDir
@@ -128,9 +142,16 @@ function Get-PatchedConfig {
     if ($gsLine.Count -gt 0) {
         Set-IniBlock -Path $OutPath -Section 'game_scripts' -MarkerId "profile: $Profile, section: game_scripts" -BlockLines $gsLine
     }
+
+    if ($WithAI) {
+        $aiLines = Build-AiPlayersLines -Executable $exe -Manifest $manifest
+        if ($aiLines.Count -gt 0) {
+            Set-IniBlock -Path $OutPath -Section 'ai_players' -MarkerId "profile: $Profile, section: ai_players" -BlockLines $aiLines
+        }
+    }
 }
 
-$requiredItems = Get-RequiredContent -Manifest $manifest
+$requiredItems = Get-RequiredContent -Manifest $manifest -IncludeAi:$WithAI
 $preexisting = [System.Collections.Generic.List[string]]::new()
 $missingItems = [System.Collections.Generic.List[string]]::new()
 foreach ($item in $requiredItems) {
@@ -141,6 +162,9 @@ foreach ($item in $requiredItems) {
         $missingItems.Add($item.name)
         Write-Host "  content missing: $($item.name)"
     }
+}
+if ($WithAI) {
+    Write-Host '  (-WithAI: AI opponent included above if not already present)'
 }
 
 if ($DryRun) {
@@ -176,6 +200,10 @@ if ($DryRun) {
     } else {
         Write-Host '  openttd.cfg does not exist yet -- would be created with all profile sections.'
     }
+    if ($WithAI) {
+        Write-Host '  [difficulty] would also set max_no_competitors = 1 (-WithAI)'
+        Write-Host '  [ai_players] would pin one AI opponent to a company slot (-WithAI)'
+    }
     Write-Host ''
     Write-Host "Backup would be created under: $BackupRoot\<timestamp>\ (only if config actually changes)"
     exit 0
@@ -205,6 +233,10 @@ if ($Verify) {
             $fail = $true
         }
     }
+    if ($WithAI -and (Get-IniBlock -Path $configFile -MarkerId "profile: $Profile, section: ai_players").Count -eq 0) {
+        Write-Host "FAIL: -WithAI requested but no OpenTTD Blueprint block found in [ai_players] of $configFile" -ForegroundColor Red
+        $fail = $true
+    }
     if (-not $fail) {
         Write-Host "OK: profile '$Profile' is installed and consistent."
         exit 0
@@ -220,10 +252,13 @@ Initialize-ConfigSkeleton
 if ($missingItems.Count -gt 0) {
     Write-Host "Downloading $($missingItems.Count) required content item(s) via OpenTTD's Online Content system..."
     $logFile = [System.IO.Path]::GetTempFileName()
-    $ok = Invoke-ContentDownload -Executable $exe -Manifest $manifest -LogFile $logFile -DataDir $dataDir
+    $ok = Invoke-ContentDownload -Executable $exe -Manifest $manifest -LogFile $logFile -DataDir $dataDir -WithAi:$WithAI
     if (-not $ok) {
-        Write-Error 'ERROR: content download did not complete. Log:'
-        Get-Content -LiteralPath $logFile | Write-Error
+        # Not Write-Error here: under $ErrorActionPreference = 'Stop' the
+        # first Write-Error call would terminate immediately, truncating
+        # the log to one line.
+        Write-Host 'ERROR: content download did not complete. Log:' -ForegroundColor Red
+        Get-Content -LiteralPath $logFile | Write-Host
         exit 1
     }
     Remove-Item -Force $logFile

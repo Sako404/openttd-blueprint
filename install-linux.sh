@@ -2,7 +2,10 @@
 # OpenTTD Blueprint — Linux installer.
 #
 # Usage:
-#   ./install-linux.sh [--dry-run] [--verify] [--profile NAME] [--help]
+#   ./install-linux.sh [--dry-run] [--verify] [--with-ai] [--profile NAME] [--help]
+#
+# --with-ai pins one optional AI opponent (see profiles/<name>/content-manifest.json,
+# type "ai") to a company slot. Off by default — see docs/CONFIGURATION.md.
 #
 # See docs/ARCHITECTURE.md for the full design (config ownership,
 # transactional install order, idempotency) and docs/LINUX.md for
@@ -27,18 +30,20 @@ source "${BP_ROOT}/scripts/linux/content.sh"
 
 PROFILE="logistics"
 MODE="install"
+WITH_AI=0
 
 for arg in "$@"; do
 	case "$arg" in
 	--dry-run) MODE="dry-run" ;;
 	--verify) MODE="verify" ;;
+	--with-ai) WITH_AI=1 ;;
 	--profile=*) PROFILE="${arg#--profile=}" ;;
 	--profile)
 		echo "ERROR: --profile requires a value, e.g. --profile=logistics" >&2
 		exit 2
 		;;
 	-h | --help)
-		sed -n '2,8p' "${BASH_SOURCE[0]}"
+		sed -n '2,12p' "${BASH_SOURCE[0]}"
 		exit 0
 		;;
 	*)
@@ -112,9 +117,9 @@ STATE_FILE="${CONFIG_DIR}/blueprint-state.json"
 ensure_config_skeleton() {
 	mkdir -p "$CONFIG_DIR"
 	if [[ ! -f "$CONFIG_FILE" ]]; then
-		printf '[difficulty]\n\n[economy]\n\n[vehicle]\n\n[linkgraph]\n\n[game_creation]\n\n[newgrf]\n\n[game_scripts]\n' >"$CONFIG_FILE"
+		printf '[difficulty]\n\n[economy]\n\n[vehicle]\n\n[linkgraph]\n\n[game_creation]\n\n[newgrf]\n\n[game_scripts]\n\n[ai_players]\n' >"$CONFIG_FILE"
 	fi
-	for section in difficulty economy vehicle linkgraph game_creation newgrf game_scripts; do
+	for section in difficulty economy vehicle linkgraph game_creation newgrf game_scripts ai_players; do
 		grep -qxF "[${section}]" "$CONFIG_FILE" || printf '\n[%s]\n' "$section" >>"$CONFIG_FILE"
 	done
 }
@@ -132,6 +137,14 @@ compute_patched_config() {
 	ini_split_sections "$CFG_BLOCK_FILE" "$split_dir"
 	for section in difficulty economy vehicle linkgraph game_creation; do
 		[[ -f "${split_dir}/${section}.body" ]] || continue
+		if [[ "$section" == "difficulty" && "$WITH_AI" -eq 1 ]]; then
+			# --with-ai needs at least one competitor slot enabled, or the
+			# [ai_players] pin below has no effect (max_no_competitors=0
+			# means no AI companies get created regardless of what's
+			# pinned to a slot — verified against OpenTTD's own settings
+			# table, docs/RESEARCH.md §9).
+			printf '%s\n' "max_no_competitors = 1" >>"${split_dir}/${section}.body"
+		fi
 		ini_patch_block "$out" "$section" "profile: ${PROFILE}, section: ${section}" "${split_dir}/${section}.body"
 	done
 	rm -rf "$split_dir"
@@ -148,6 +161,16 @@ compute_patched_config() {
 		ini_patch_block "$out" "game_scripts" "profile: ${PROFILE}, section: game_scripts" "$gs_line"
 	fi
 	rm -f "$gs_line"
+
+	if [[ "$WITH_AI" -eq 1 ]]; then
+		local ai_lines
+		ai_lines="$(mktemp)"
+		build_ai_players_lines "$EXE" "$MANIFEST_FILE" >"$ai_lines"
+		if [[ -s "$ai_lines" ]]; then
+			ini_patch_block "$out" "ai_players" "profile: ${PROFILE}, section: ai_players" "$ai_lines"
+		fi
+		rm -f "$ai_lines"
+	fi
 }
 
 REQUIRED_ITEMS_MISSING=0
@@ -163,7 +186,13 @@ while IFS=$'\t' read -r content_id type name; do
 		MISSING_NAMES+=("$name")
 		echo "  content missing: ${name}"
 	fi
-done < <(jq -r '.content[] | select(.required == true and .source == "bananas") | [.content_id, .type, .name] | @tsv' "$MANIFEST_FILE")
+done < <(jq -r --argjson with_ai "$WITH_AI" \
+	'.content[] | select((.required == true or (.type == "ai" and $with_ai == 1)) and .source == "bananas") | [.content_id, .type, .name] | @tsv' \
+	"$MANIFEST_FILE")
+
+if [[ "$WITH_AI" -eq 1 ]]; then
+	echo "  (--with-ai: AI opponent included above if not already present)"
+fi
 
 if [[ "$MODE" == "dry-run" ]]; then
 	echo "--- DRY RUN: no changes will be made ---"
@@ -198,6 +227,10 @@ if [[ "$MODE" == "dry-run" ]]; then
 	else
 		echo "  openttd.cfg does not exist yet — would be created with all profile sections."
 	fi
+	if [[ "$WITH_AI" -eq 1 ]]; then
+		echo "  [difficulty] would also set max_no_competitors = 1 (--with-ai)"
+		echo "  [ai_players] would pin one AI opponent to a company slot (--with-ai)"
+	fi
 	echo
 	echo "Backup would be created under: ${BACKUP_ROOT}/<timestamp>/ (only if config actually changes)"
 	exit 0
@@ -221,13 +254,19 @@ if [[ "$MODE" == "verify" ]]; then
 			echo "FAIL: required content missing: ${name}" >&2
 			fail=1
 		fi
-	done < <(jq -r '.content[] | select(.required == true and .source == "bananas") | [.content_id, .type, .name] | @tsv' "$MANIFEST_FILE")
+	done < <(jq -r --argjson with_ai "$WITH_AI" \
+		'.content[] | select((.required == true or (.type == "ai" and $with_ai == 1)) and .source == "bananas") | [.content_id, .type, .name] | @tsv' \
+		"$MANIFEST_FILE")
 	for section in difficulty economy vehicle linkgraph game_creation newgrf; do
 		if [[ -z "$(ini_extract_block "$CONFIG_FILE" "profile: ${PROFILE}, section: ${section}")" ]]; then
 			echo "FAIL: no OpenTTD Blueprint block found in [${section}] of ${CONFIG_FILE}" >&2
 			fail=1
 		fi
 	done
+	if [[ "$WITH_AI" -eq 1 ]] && [[ -z "$(ini_extract_block "$CONFIG_FILE" "profile: ${PROFILE}, section: ai_players")" ]]; then
+		echo "FAIL: --with-ai requested but no OpenTTD Blueprint block found in [ai_players] of ${CONFIG_FILE}" >&2
+		fail=1
+	fi
 	if [[ "$fail" -eq 0 ]]; then
 		echo "OK: profile '${PROFILE}' is installed and consistent."
 		exit 0
@@ -244,7 +283,7 @@ if [[ "$REQUIRED_ITEMS_MISSING" -gt 0 ]]; then
 	echo "Downloading ${REQUIRED_ITEMS_MISSING} required content item(s) via OpenTTD's Online Content system..."
 	echo "(a first sync of OpenTTD's content catalog can take several minutes — see docs/RESEARCH.md §3)"
 	LOG_FILE="$(mktemp)"
-	if ! download_required_content "$EXE" "$MANIFEST_FILE" "$LOG_FILE" "$DATA_DIR"; then
+	if ! download_required_content "$EXE" "$MANIFEST_FILE" "$LOG_FILE" "$DATA_DIR" "$WITH_AI"; then
 		echo "ERROR: content download did not complete. Log:" >&2
 		cat "$LOG_FILE" >&2
 		exit 1
