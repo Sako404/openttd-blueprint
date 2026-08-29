@@ -257,7 +257,14 @@ function Resolve-RegisteredName {
         if ($inSection -and $line -match '^List of ') { break }
         if ($inSection -and $line.Trim()) {
             $token = ($line -split ' \(v')[0]
-            if ($token.StartsWith($needle) -or $needle.StartsWith($token)) {
+            # Compare space-insensitively: $needle already has spaces
+            # stripped, but $token (straight from openttd -h's own output,
+            # e.g. "Renewed Village Growth") does not -- comparing them
+            # directly would never match a multi-word name. $token itself
+            # (with spaces) is what's returned and used as the actual
+            # [game_scripts]/[ai_players] cfg key.
+            $tokenBare = $token -replace ' ', ''
+            if ($tokenBare.StartsWith($needle) -or $needle.StartsWith($tokenBare)) {
                 return $token
             }
         }

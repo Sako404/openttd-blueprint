@@ -245,11 +245,27 @@ resolve_newgrf_filename() {
 # of `openttd -h`'s output (e.g. "List of Game Scripts:", "List of AIs:").
 # Returns empty if not found (e.g. content wasn't actually downloaded).
 _resolve_registered_name() {
-	local exe="$1" heading="$2" display_name="$3" needle line token
+	local exe="$1" heading="$2" display_name="$3" needle line token token_bare
 	needle="$(printf '%s' "$display_name" | tr -d ' ')"
 	while IFS= read -r line; do
-		token="${line%% (v*}"
-		if [[ "$token" == "$needle"* || "$needle" == "$token"* ]]; then
+		# `\(` — a literal, escaped paren in the glob pattern. Unescaped,
+		# bash treats "(v*" as the start of an extglob group and raises
+		# "bad pattern" instead of matching literally, at least when
+		# invoked in some shells/contexts — confirmed via a real crash
+		# (build_gamescript_line failing) that only appeared once a live
+		# run finally got far enough to reach this code path for the
+		# first time. See docs/RESEARCH.md §3.
+		token="${line%% \(v*}"
+		# Compare space-insensitively: `needle` above has spaces already
+		# stripped, but `token` (straight from openttd -h's own output,
+		# e.g. "Renewed Village Growth") does not — comparing them
+		# directly would never match a multi-word name. `token` itself
+		# (with spaces) is what's echoed and used as the actual
+		# [game_scripts]/[ai_players] cfg key, since that's the format
+		# openttd -h itself displays and (per AILoadConfig/AISaveConfig
+		# in OpenTTD's own source) is what config->GetName() round-trips.
+		token_bare="$(printf '%s' "$token" | tr -d ' ')"
+		if [[ "$token_bare" == "$needle"* || "$needle" == "$token_bare"* ]]; then
 			echo "$token"
 			return 0
 		fi
