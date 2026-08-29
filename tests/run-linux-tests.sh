@@ -169,7 +169,6 @@ echo
 echo "== dry-run makes no writes (real installer, throwaway fixture profile) =="
 DRYRUN_HOME="${WORKDIR}/home"
 mkdir -p "${DRYRUN_HOME}/config" "${DRYRUN_HOME}/data"
-before_hash="none"
 if XDG_CONFIG_HOME="${DRYRUN_HOME}/config" XDG_DATA_HOME="${DRYRUN_HOME}/data" \
 	"${BP_ROOT}/install-linux.sh" --dry-run >/tmp/bp_dryrun_out 2>&1; then
 	pass "dry-run against a machine with no OpenTTD config exits 0"

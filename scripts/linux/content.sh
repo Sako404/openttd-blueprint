@@ -130,6 +130,11 @@ download_required_content() {
 
 	: >"$log_file"
 	# shellcheck disable=SC2086 # $exe may be "flatpak run <id>"
+	# shellcheck disable=SC2094 # deliberate: _generate_content_commands polls
+	# $log_file via its own fresh `wc`/`tail`/`grep` opens on the path, not a
+	# shared fd with this append redirect — safe, and is how it paces itself
+	# against the openttd process's real-time output (see that function's
+	# own header comment and docs/RESEARCH.md §3).
 	$exe -D -x < <(_generate_content_commands "$log_file" "$manifest" "$data_dir" "$with_ai") >>"$log_file" 2>&1 &
 	pid=$!
 
