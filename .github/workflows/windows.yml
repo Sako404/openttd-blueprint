@@ -1,0 +1,49 @@
+name: Windows
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  psscriptanalyzer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Warning,Error
+          $results | Format-Table -AutoSize
+          if ($results.Count -gt 0) {
+            Write-Error "PSScriptAnalyzer found $($results.Count) issue(s)."
+            exit 1
+          }
+
+  tests:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax check every script (parser only, no execution)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Get-ChildItem -Recurse -Include *.ps1 | ForEach-Object {
+            Write-Host "checking $($_.FullName)"
+            $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content -Raw $_.FullName), [ref]$null)
+          }
+      - name: Profile/manifest JSON is well-formed
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Get-ChildItem -Path profiles -Recurse -Include profile.json,content-manifest.json | ForEach-Object {
+            Write-Host "checking $($_.FullName)"
+            Get-Content -Raw $_.FullName | ConvertFrom-Json | Out-Null
+          }
+      - name: Fixture test suite
+        shell: pwsh
+        run: .\tests\Run-WindowsTests.ps1

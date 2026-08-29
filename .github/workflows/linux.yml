@@ -1,0 +1,38 @@
+name: Linux
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ShellCheck
+        run: |
+          shopt -s globstar
+          shellcheck install-linux.sh uninstall-linux.sh scripts/linux/**/*.sh scripts/common/*.sh tests/*.sh
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: bash -n syntax check on every script
+        run: |
+          set -euo pipefail
+          for f in install-linux.sh uninstall-linux.sh scripts/linux/*.sh scripts/common/*.sh tests/*.sh; do
+            echo "checking $f"
+            bash -n "$f"
+          done
+      - name: Profile/manifest JSON is well-formed
+        run: |
+          set -euo pipefail
+          for f in profiles/*/profile.json profiles/*/content-manifest.json; do
+            echo "checking $f"
+            jq empty "$f"
+          done
+      - name: Fixture test suite
+        run: ./tests/run-linux-tests.sh
