@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   and `--verify`/`-Verify` modes, timestamped config backups, and
   idempotent re-runs.
 - `uninstall-linux.sh` and `uninstall-windows.ps1` for config restore.
+- Optional AI opponent (`--with-ai` / `-WithAI`, off by default): pins
+  RailwAI to a company slot via `[ai_players]`/`max_no_competitors`,
+  selected after comparing it against AdmiralAI/CivilAI/SimpleAI.
 - Content manifest schema and profile resolution.
 - Automated fixture tests for manifest parsing, config generation and
   installer safety behaviour.
