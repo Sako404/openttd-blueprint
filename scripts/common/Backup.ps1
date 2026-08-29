@@ -1,4 +1,4 @@
-# Timestamped config backups. PowerShell port of scripts/common/backup.sh.
+﻿# Timestamped config backups. PowerShell port of scripts/common/backup.sh.
 # See docs/ARCHITECTURE.md "Backup strategy".
 
 function New-ConfigBackup {

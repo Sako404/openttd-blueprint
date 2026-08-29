@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 OpenTTD Blueprint — Windows uninstaller.
 
@@ -14,8 +14,8 @@ List available backups, newest first, then exit.
 .PARAMETER RestoreDir
 Restore a specific backup directory instead of the most recent one.
 
-.PARAMETER Profile
-Profile name (default: logistics).
+.PARAMETER ProfileName
+Profile name (default: logistics). Accepts -Profile as an alias.
 
 .EXAMPLE
 .\uninstall-windows.ps1 -ListBackups
@@ -26,7 +26,10 @@ Profile name (default: logistics).
 param(
     [switch]$ListBackups,
     [string]$RestoreDir,
-    [string]$Profile = 'logistics'
+    # Named ProfileName (not Profile) to avoid shadowing PowerShell's own
+    # automatic $PROFILE variable — -Profile kept working via the alias.
+    [Alias('Profile')]
+    [string]$ProfileName = 'logistics'
 )
 
 Set-StrictMode -Version Latest
@@ -85,7 +88,7 @@ Copy-Item -LiteralPath $backupCfg -Destination $configFile -Force
 
 if (Test-Path -LiteralPath $StateFile) {
     Remove-Item -Force $StateFile
-    Write-Host "Removed $StateFile (profile '$Profile' is no longer marked installed)."
+    Write-Host "Removed $StateFile (profile '$ProfileName' is no longer marked installed)."
 }
 
 Write-Host 'Restore complete. Downloaded content under the OpenTTD data directory was left untouched.'

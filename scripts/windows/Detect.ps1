@@ -1,4 +1,4 @@
-# Read-only detection of the local OpenTTD installation on Windows.
+﻿# Read-only detection of the local OpenTTD installation on Windows.
 # Nothing in this file writes to disk. See docs/WINDOWS.md for the
 # directory layout this assumes, and docs/RESEARCH.md for how it was
 # verified (Linux-side; the Windows directory layout itself is per
@@ -21,8 +21,8 @@ function Get-SteamLibraryPaths {
         $vdf = Join-Path $lib 'steamapps\libraryfolders.vdf'
         if (Test-Path -LiteralPath $vdf) {
             $content = Get-Content -LiteralPath $vdf -Raw
-            $matches = [regex]::Matches($content, '"path"\s+"([^"]+)"')
-            foreach ($m in $matches) {
+            $vdfMatches = [regex]::Matches($content, '"path"\s+"([^"]+)"')
+            foreach ($m in $vdfMatches) {
                 # VDF escapes backslashes as \\
                 $result.Add(($m.Groups[1].Value -replace '\\\\', '\'))
             }

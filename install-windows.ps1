@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
 OpenTTD Blueprint — Windows installer.
 
@@ -13,8 +13,8 @@ Show what would happen; make no changes.
 .PARAMETER Verify
 Check that the profile is installed and consistent; make no changes.
 
-.PARAMETER Profile
-Profile name (default: logistics).
+.PARAMETER ProfileName
+Profile name (default: logistics). Accepts -Profile as an alias.
 
 .PARAMETER WithAI
 Pin one optional AI opponent to a company slot. Off by default — see
@@ -31,7 +31,12 @@ param(
     [switch]$DryRun,
     [switch]$Verify,
     [switch]$WithAI,
-    [string]$Profile = 'logistics'
+    # Named ProfileName (not Profile) to avoid shadowing PowerShell's own
+    # automatic $PROFILE variable (PSAvoidAssignmentToAutomaticVariable) —
+    # -Profile is kept working via the alias for parity with the Linux
+    # installer's --profile=.
+    [Alias('Profile')]
+    [string]$ProfileName = 'logistics'
 )
 
 Set-StrictMode -Version Latest
@@ -47,13 +52,13 @@ $BpRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $BpRoot 'scripts\windows\Detect.ps1')
 . (Join-Path $BpRoot 'scripts\windows\Content.ps1')
 
-$ProfileDir = Join-Path $BpRoot "profiles\$Profile"
+$ProfileDir = Join-Path $BpRoot "profiles\$ProfileName"
 $ManifestFile = Join-Path $ProfileDir 'content-manifest.json'
 $ProfileFile = Join-Path $ProfileDir 'profile.json'
 $CfgBlockFile = Join-Path $ProfileDir 'openttd.cfg.block'
 
 if (-not (Test-Path -LiteralPath $ProfileDir)) {
-    Write-Error "ERROR: unknown profile '$Profile' (no such directory: $ProfileDir)"
+    Write-Error "ERROR: unknown profile '$ProfileName' (no such directory: $ProfileDir)"
     exit 1
 }
 
@@ -63,7 +68,7 @@ if (-not (Get-Command tar -ErrorAction SilentlyContinue)) {
 }
 
 Write-Host "OpenTTD Blueprint v$BpVersion"
-Write-Host "Profile: $Profile"
+Write-Host "Profile: $ProfileName"
 Write-Host ''
 
 $manifest = Test-ContentManifest -Path $ManifestFile
@@ -91,7 +96,7 @@ if (-not $exe) {
 
 $minVersion = $profileData.openttd_min_version
 if ($version -and ([version]($version -replace '[^\d\.].*$', '') -lt [version]$minVersion)) {
-    Write-Error "ERROR: OpenTTD was found, but version $version is too old for the $Profile profile.`n       Required: OpenTTD >= $minVersion`n       Detected: $version"
+    Write-Error "ERROR: OpenTTD was found, but version $version is too old for the $ProfileName profile.`n       Required: OpenTTD >= $minVersion`n       Detected: $version"
     exit 1
 }
 
@@ -131,22 +136,22 @@ function Get-PatchedConfig {
             # table, docs/RESEARCH.md §9).
             $blockLines = $blockLines + 'max_no_competitors = 1'
         }
-        Set-IniBlock -Path $OutPath -Section $section -MarkerId "profile: $Profile, section: $section" -BlockLines $blockLines
+        Set-IniBlock -Path $OutPath -Section $section -MarkerId "profile: $ProfileName, section: $section" -BlockLines $blockLines
     }
     Remove-Item -Recurse -Force $splitDir
 
     $newgrfLines = Build-NewgrfLines -DataDir $dataDir -Manifest $manifest
-    Set-IniBlock -Path $OutPath -Section 'newgrf' -MarkerId "profile: $Profile, section: newgrf" -BlockLines $newgrfLines
+    Set-IniBlock -Path $OutPath -Section 'newgrf' -MarkerId "profile: $ProfileName, section: newgrf" -BlockLines $newgrfLines
 
     $gsLine = Build-GameScriptLine -Executable $exe -Manifest $manifest
     if ($gsLine.Count -gt 0) {
-        Set-IniBlock -Path $OutPath -Section 'game_scripts' -MarkerId "profile: $Profile, section: game_scripts" -BlockLines $gsLine
+        Set-IniBlock -Path $OutPath -Section 'game_scripts' -MarkerId "profile: $ProfileName, section: game_scripts" -BlockLines $gsLine
     }
 
     if ($WithAI) {
         $aiLines = Build-AiPlayersLines -Executable $exe -Manifest $manifest
         if ($aiLines.Count -gt 0) {
-            Set-IniBlock -Path $OutPath -Section 'ai_players' -MarkerId "profile: $Profile, section: ai_players" -BlockLines $aiLines
+            Set-IniBlock -Path $OutPath -Section 'ai_players' -MarkerId "profile: $ProfileName, section: ai_players" -BlockLines $aiLines
         }
     }
 }
@@ -185,10 +190,10 @@ if ($DryRun) {
         foreach ($section in @('difficulty', 'economy', 'vehicle', 'linkgraph', 'game_creation')) {
             $bodyFile = Join-Path $splitDir "$section.body"
             if (-not (Test-Path -LiteralPath $bodyFile)) { continue }
-            $before = (Get-IniBlock -Path $configFile -MarkerId "profile: $Profile, section: $section") -join "`n"
+            $before = (Get-IniBlock -Path $configFile -MarkerId "profile: $ProfileName, section: $section") -join "`n"
             $blockLines = @(Get-Content -LiteralPath $bodyFile -Encoding UTF8)
-            Set-IniBlock -Path $tmpCheck -Section $section -MarkerId "profile: $Profile, section: $section" -BlockLines $blockLines
-            $after = (Get-IniBlock -Path $tmpCheck -MarkerId "profile: $Profile, section: $section") -join "`n"
+            Set-IniBlock -Path $tmpCheck -Section $section -MarkerId "profile: $ProfileName, section: $section" -BlockLines $blockLines
+            $after = (Get-IniBlock -Path $tmpCheck -MarkerId "profile: $ProfileName, section: $section") -join "`n"
             if ($before -ne $after) {
                 Write-Host "  [$section] would be added/updated"
                 $changed = $true
@@ -216,8 +221,8 @@ if ($Verify) {
         exit 1
     }
     $installedProfile = Read-BlueprintStateField -StateFile $StateFile -FieldName 'profile'
-    if ($installedProfile -ne $Profile) {
-        Write-Host "FAIL: installed profile is '$installedProfile', not '$Profile'." -ForegroundColor Red
+    if ($installedProfile -ne $ProfileName) {
+        Write-Host "FAIL: installed profile is '$installedProfile', not '$ProfileName'." -ForegroundColor Red
         $fail = $true
     }
     foreach ($item in $requiredItems) {
@@ -228,17 +233,17 @@ if ($Verify) {
         }
     }
     foreach ($section in @('difficulty', 'economy', 'vehicle', 'linkgraph', 'game_creation', 'newgrf')) {
-        if ((Get-IniBlock -Path $configFile -MarkerId "profile: $Profile, section: $section").Count -eq 0) {
+        if ((Get-IniBlock -Path $configFile -MarkerId "profile: $ProfileName, section: $section").Count -eq 0) {
             Write-Host "FAIL: no OpenTTD Blueprint block found in [$section] of $configFile" -ForegroundColor Red
             $fail = $true
         }
     }
-    if ($WithAI -and (Get-IniBlock -Path $configFile -MarkerId "profile: $Profile, section: ai_players").Count -eq 0) {
+    if ($WithAI -and (Get-IniBlock -Path $configFile -MarkerId "profile: $ProfileName, section: ai_players").Count -eq 0) {
         Write-Host "FAIL: -WithAI requested but no OpenTTD Blueprint block found in [ai_players] of $configFile" -ForegroundColor Red
         $fail = $true
     }
     if (-not $fail) {
-        Write-Host "OK: profile '$Profile' is installed and consistent."
+        Write-Host "OK: profile '$ProfileName' is installed and consistent."
         exit 0
     } else {
         exit 1
@@ -277,15 +282,15 @@ if ($currentBytes -ceq $patchedBytes) {
     $backupDir = ''
 } else {
     New-Item -ItemType Directory -Force -Path $BackupRoot | Out-Null
-    $backupDir = New-ConfigBackup -ConfigFile $configFile -BackupRoot $BackupRoot -ProfileName $Profile `
+    $backupDir = New-ConfigBackup -ConfigFile $configFile -BackupRoot $BackupRoot -ProfileName $ProfileName `
         -OpenttdVersion $(if ($version) { $version } else { 'unknown' }) -BlueprintVersion $BpVersion
     Write-Host "Backed up existing config to: $backupDir"
     Copy-Item -LiteralPath $patched -Destination $configFile -Force
-    Write-Host "Applied $Profile profile configuration."
+    Write-Host "Applied $ProfileName profile configuration."
 }
 Remove-Item -Force $patched -ErrorAction SilentlyContinue
 
-Write-BlueprintState -StateFile $StateFile -BlueprintVersion $BpVersion -ProfileName $Profile `
+Write-BlueprintState -StateFile $StateFile -BlueprintVersion $BpVersion -ProfileName $ProfileName `
     -ManifestVersion $profileData.blueprint_version -BackupDir $(if ($backupDir) { $backupDir } else { 'none' }) `
     -PreexistingContent $preexisting.ToArray() -AddedContent $missingItems.ToArray()
 Write-Host "Wrote state: $StateFile"

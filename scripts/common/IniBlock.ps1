@@ -1,4 +1,4 @@
-# Idempotent marked-block patching for OpenTTD's INI-style openttd.cfg.
+﻿# Idempotent marked-block patching for OpenTTD's INI-style openttd.cfg.
 # PowerShell port of scripts/common/ini_block.sh — the two MUST stay
 # behaviourally identical (same marker text, same "leave everything outside
 # the markers untouched" contract). See docs/ARCHITECTURE.md "Config

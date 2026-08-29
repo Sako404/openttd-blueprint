@@ -1,4 +1,4 @@
-# Content acquisition and [newgrf]/[game_scripts] block generation for
+﻿# Content acquisition and [newgrf]/[game_scripts] block generation for
 # Windows. PowerShell port of scripts/linux/content.sh — see that file's
 # header and docs/RESEARCH.md §3/§5 for why this drives OpenTTD's own
 # console `content` commands, and why filenames/script names are resolved

@@ -224,7 +224,7 @@ shellcheck install-linux.sh uninstall-linux.sh scripts/linux/*.sh scripts/common
 ```
 
 ```powershell
-Invoke-ScriptAnalyzer -Path . -Recurse
+Invoke-ScriptAnalyzer -Path . -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
 .\tests\Run-WindowsTests.ps1
 ```
 

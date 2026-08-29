@@ -1,4 +1,4 @@
-# Read/write blueprint-state.json. PowerShell port of scripts/common/state.sh.
+﻿# Read/write blueprint-state.json. PowerShell port of scripts/common/state.sh.
 # See docs/ARCHITECTURE.md "Ownership metadata".
 
 function Write-BlueprintState {

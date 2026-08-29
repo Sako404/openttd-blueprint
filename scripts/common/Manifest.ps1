@@ -1,4 +1,4 @@
-# Load and lightly validate profile.json / content-manifest.json.
+﻿# Load and lightly validate profile.json / content-manifest.json.
 # PowerShell port of scripts/common/manifest.sh — see that file's header
 # comment for why this isn't full JSON-Schema validation.
 
@@ -52,25 +52,25 @@ function Test-Profile {
 
     $raw = Get-Content -LiteralPath $Path -Raw -Encoding UTF8
     try {
-        $profile = $raw | ConvertFrom-Json
+        $profileData = $raw | ConvertFrom-Json
     } catch {
         throw "Test-Profile: not valid JSON: $Path"
     }
 
     $missing = @()
-    if ($profile.schema_version -ne 1) { $missing += 'schema_version' }
-    if ([string]::IsNullOrEmpty($profile.name)) { $missing += 'name' }
-    if ([string]::IsNullOrEmpty($profile.display_name)) { $missing += 'display_name' }
-    if ([string]::IsNullOrEmpty($profile.blueprint_version)) { $missing += 'blueprint_version' }
-    if ([string]::IsNullOrEmpty($profile.openttd_min_version)) { $missing += 'openttd_min_version' }
-    if ($null -eq $profile.gameplay.starting_year) { $missing += 'gameplay.starting_year' }
-    if ($null -eq $profile.gameplay.map_size.x -or $null -eq $profile.gameplay.map_size.y) { $missing += 'gameplay.map_size' }
+    if ($profileData.schema_version -ne 1) { $missing += 'schema_version' }
+    if ([string]::IsNullOrEmpty($profileData.name)) { $missing += 'name' }
+    if ([string]::IsNullOrEmpty($profileData.display_name)) { $missing += 'display_name' }
+    if ([string]::IsNullOrEmpty($profileData.blueprint_version)) { $missing += 'blueprint_version' }
+    if ([string]::IsNullOrEmpty($profileData.openttd_min_version)) { $missing += 'openttd_min_version' }
+    if ($null -eq $profileData.gameplay.starting_year) { $missing += 'gameplay.starting_year' }
+    if ($null -eq $profileData.gameplay.map_size.x -or $null -eq $profileData.gameplay.map_size.y) { $missing += 'gameplay.map_size' }
 
     if ($missing.Count -gt 0) {
         throw "Test-Profile: missing required field(s) in ${Path}: $($missing -join ', ')"
     }
 
-    return $profile
+    return $profileData
 }
 
 function Get-RequiredContent {

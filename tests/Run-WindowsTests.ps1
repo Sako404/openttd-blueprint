@@ -1,4 +1,4 @@
-# Fixture-based tests for the Windows-side shared library, mirroring
+﻿# Fixture-based tests for the Windows-side shared library, mirroring
 # tests/run-linux-tests.sh (see that file for why these two must stay in
 # sync). No Pester dependency — a small hand-rolled runner, consistent
 # with docs/ARCHITECTURE.md "Dependency minimisation". Never touches a
