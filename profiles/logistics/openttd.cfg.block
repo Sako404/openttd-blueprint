@@ -1,0 +1,47 @@
+; OpenTTD Blueprint — logistics profile — reviewed gameplay config block.
+;
+; This file is NOT copied into openttd.cfg verbatim. scripts/common/ini_block.sh
+; injects each [section] body below into the matching section of the user's
+; real openttd.cfg, wrapped in "### BEGIN/END OPENTTD BLUEPRINT ###" markers
+; (one marker pair per section) so re-running the installer updates only
+; these lines. See docs/ARCHITECTURE.md "Config ownership" and
+; docs/CONFIGURATION.md for the reasoning behind each value, and
+; docs/RESEARCH.md §7 for how each key/value was verified against OpenTTD's
+; own settings tables.
+
+[game_creation]
+starting_year = 1950
+; map_x/map_y are the bit exponent, not the tile count: 2^10 = 1024.
+map_x = 10
+map_y = 10
+
+[difficulty]
+; Moderate town count and industry density — FIRS's chains are already
+; more complex than baseset industries, so this avoids an overcrowded map.
+number_towns = 2
+industry_density = 4
+; VehicleBreakdowns: None=0, Reduced=1 (engine default), Normal=2.
+; Set to None — network design should matter more than random breakdowns.
+vehicle_breakdowns = 0
+
+[economy]
+; Engine default is currently false for both; this profile turns them on
+; deliberately for a less trivially-easy economy.
+inflation = true
+infrastructure_maintenance = true
+; 0-4 range; 2 is "Normal"/moderate.
+town_growth_rate = 2
+
+[vehicle]
+; AccelerationModel: Original=0, Realistic=1 (already the engine default;
+; pinned explicitly here for reproducibility, not because it changes anything).
+train_acceleration_model = 1
+roadveh_acceleration_model = 1
+wagon_speed_limits = true
+
+[linkgraph]
+; DistributionType: Manual=0, Asymmetric=1, Symmetric=2.
+distribution_pax = 2
+distribution_mail = 2
+distribution_armoured = 1
+distribution_default = 1
