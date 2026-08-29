@@ -25,9 +25,14 @@ industry_density = 4
 vehicle_breakdowns = 0
 
 [economy]
-; Engine default is currently false for both; this profile turns them on
-; deliberately for a less trivially-easy economy.
-inflation = true
+; Engine default for infrastructure_maintenance is false; this profile turns
+; it on deliberately for a less trivially-easy economy. inflation is left at
+; the engine default (false) — Iron Horse (required NewGRF, see
+; content-manifest.json) hard-refuses to load when inflation is on, so
+; turning it on here would break train availability entirely. Verified live:
+; see docs/RESEARCH.md §5 "Stability check" for the exact fatal-error text
+; and the incompatibility this documents.
+inflation = false
 infrastructure_maintenance = true
 ; 0-4 range; 2 is "Normal"/moderate.
 town_growth_rate = 2

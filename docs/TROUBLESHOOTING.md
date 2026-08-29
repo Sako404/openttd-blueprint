@@ -64,6 +64,18 @@ script's registered name via `openttd -h`'s "List of Game Scripts:"
 listing; this can happen if the script's author changed its internal
 short name. Open an issue with your `openttd -h` output.
 
+## A NewGRF fatal-errors on startup ("not compatible with OpenTTD Inflation" or similar)
+
+Some NewGRFs hard-refuse to load under specific engine settings — this is
+the NewGRF's own author-authored check, not an installer bug. The
+`logistics` profile hit exactly this with Iron Horse and `economy.inflation`
+(see `docs/RESEARCH.md` §5 "Stability check" and `docs/CONFIGURATION.md`),
+and now ships with the conflicting setting left at the engine default. If
+you've since changed `inflation` (or another economy setting) back on
+manually and a required NewGRF stops loading, that manual change is the
+cause — check `content-manifest.json`'s `incompatibilities` field for the
+item, and OpenTTD's own startup log for the exact NewGRF error text.
+
 ## Windows: "running scripts is disabled on this system"
 
 PowerShell's default execution policy blocks unsigned local scripts. Don't

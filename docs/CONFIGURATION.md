@@ -59,19 +59,26 @@ acceleration makes gradients, curves and train weight/power actually
 matter for route planning, which is central to a "network planning
 matters" profile.
 
-## Economy: inflation and infrastructure maintenance on
+## Economy: infrastructure maintenance on, inflation left off
 
-`inflation = true`, `infrastructure_maintenance = true`. **Both deviate
-from the current engine default**, which is `false` for each in this
-OpenTTD release. The profile turns them back on: inflation keeps costs and
-income meaningful across a long game rather than money becoming trivial by
-the 2000s, and infrastructure maintenance means an oversized, poorly-used
-network has an ongoing cost — rewarding networks sized to what they
-actually carry, not "build everything everywhere for free."
+`inflation = false` (engine default, left unchanged), `infrastructure_maintenance
+= true` (deviates from the engine default of `false`). Infrastructure
+maintenance means an oversized, poorly-used network has an ongoing cost —
+rewarding networks sized to what they actually carry, not "build everything
+everywhere for free."
 
-Neither setting is tuned to be punishing — this is the same balance
-OpenTTD shipped as default for years before the recent default change, not
-a custom harsh-economy configuration.
+**`inflation` was deliberately turned back on in an earlier iteration of this
+profile, then reverted** after a live stability check (`openttd -D -x` against
+the fully-installed config) surfaced a fatal NewGRF error: *"Iron Horse is not
+compatible with OpenTTD Inflation. Please turn Inflation off in OpenTTD
+settings."* Iron Horse is a required, primary content item for this profile
+(see `content-manifest.json`), so `inflation` stays at the engine default
+(`false`) rather than risk breaking train availability. See
+`docs/RESEARCH.md` §5 "Stability check" for the verification trail.
+
+Infrastructure maintenance alone is not tuned to be punishing — this is the
+same balance OpenTTD shipped as default for years before its own default
+changed, not a custom harsh-economy configuration.
 
 ## CargoDist (`[linkgraph]`)
 

@@ -20,7 +20,7 @@
       "wagon_speed_limits": "true"
     },
     "economy": {
-      "inflation": "true",
+      "inflation": "false",
       "infrastructure_maintenance": "true",
       "town_growth_rate": "2"
     },

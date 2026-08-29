@@ -252,6 +252,57 @@ else refits to) → stations (CHIPS 2, references FIRS cargo classes) →
 vehicles (Iron Horse, Road Hog, SHARK — mutually order-independent, cargo
 consumers) → houses (ITL Houses, purely cosmetic, no cargo interaction).
 
+### Stability check: three bugs found by actually starting the game
+
+Every earlier check in this project (unit tests, dry-run, `--verify`,
+idempotency, backup/restore) validates the *installer's own* claims about
+what it wrote — none of them start OpenTTD with the result and watch what
+happens. Doing exactly that (`openttd -D -x` against a real installed
+config, log inspected for `error`/`fatal`/`not found`/`removed from list`)
+surfaced three real problems the installer's own checks were structurally
+blind to:
+
+1. **NewGRFs resolved but not loadable.** `[newgrf]` plain-filename
+   resolution (§5 above) only finds a file that is *loose* directly under
+   `newgrf/`. The installer originally left downloaded content packed
+   inside `content_download/newgrf/<id>-*.tar` — present on disk, correctly
+   detected by `content_present()`, but invisible to `FioCheckFileExists`.
+   Live symptom: all 8 required NewGRFs logged `ignoring invalid NewGRF
+   '...': not found`. Fix: `resolve_newgrf_filename` (`scripts/linux/content.sh`,
+   mirrored in `scripts/windows/Content.ps1`) now extracts the `.grf` out of
+   its tar and copies it (flattened) into `newgrf/` if not already loose
+   there. Verified in isolation before implementing (manual extraction of
+   one file made that file's "not found" error disappear) and again after,
+   end-to-end, for all 8.
+
+2. **Multi-word `[game_scripts]`/`[ai_players]` keys silently truncated.**
+   OpenTTD's ini parser splits an unquoted key on the first space, so
+   `Renewed Village Growth =` was read as key `Renewed`. Live symptom: `The
+   GameScript by the name 'Renewed' was no longer found`. Fix:
+   `build_gamescript_line`/`build_ai_players_lines` now wrap any key
+   containing a space in double quotes. Verified in isolation (a manually
+   quoted key loaded correctly, no "not found"/"removed from list" message,
+   only cosmetic upstream Squirrel translation-string warnings) and again
+   end-to-end.
+
+3. **`inflation = true` conflicts with a required NewGRF.** With both bugs
+   above fixed and NewGRFs actually loading, live testing surfaced a third,
+   unrelated problem: `The NewGRF "Iron Horse 4.30.0" has returned a fatal
+   error: Iron Horse is not compatible with OpenTTD Inflation. Please turn
+   Inflation off in OpenTTD settings.` — Iron Horse's own author-authored
+   error string, triggered by checking OpenTTD's inflation setting at load
+   time. This is a genuine design conflict between two of the profile's own
+   choices (economy toughness vs. the required train set), not an installer
+   bug. The server did not crash and the rest of the map/game continued,
+   but the train set — central to a "logistics" profile — silently failed
+   to load, which is a stability regression by any practical definition.
+   Resolved by reverting `economy.inflation` to the engine default
+   (`false`); see `docs/CONFIGURATION.md` and §7 below.
+
+None of these three would have been caught by testing only the installer's
+own success criteria (file present, config byte-identical, no error exit
+code) — all three required actually starting OpenTTD against the result.
+
 ## 6. CargoDist / `[linkgraph]`
 
 Verified against `src/table/settings/linkgraph_settings.ini` and
@@ -284,7 +335,7 @@ and `src/settings_type.h` enum definitions:
 | Road vehicle acceleration | `vehicle.roadveh_acceleration_model` | same enum | **Realistic (1)** | `1` | Same |
 | Wagon speed limits | `vehicle.wagon_speed_limits` | bool | `true` | `true` | Already default, pinned |
 | Vehicle breakdowns | `difficulty.vehicle_breakdowns` | `VehicleBreakdowns` (None=0, Reduced=1, Normal=2) | Reduced (1) | `0` (None) | **Deviation**: engine default is already "Reduced," profile goes further to fully Off per brief's "network design should matter more than random breakdown frustration" |
-| Inflation | `economy.inflation` | bool | `false` | `true` | **Deviation**: engine default flipped to off in recent OpenTTD releases; profile turns it back on deliberately |
+| Inflation | `economy.inflation` | bool | `false` | `false` | Left at engine default — see §5 "Stability check" below. An earlier iteration of this profile turned it on deliberately; reverted after live testing showed Iron Horse (required NewGRF) fatal-errors when inflation is on |
 | Infrastructure maintenance | `economy.infrastructure_maintenance` | bool | `false` | `true` | Same — deliberately enabled |
 | Starting year | `game_creation.starting_year` | int | 1950 | `1950` | Matches brief; still correct for a stack spanning 1860–2020 |
 | Map size | `game_creation.map_x` / `map_y` | **bits**, not tiles (`size = 2^bits`) | `8` (256) | `10` / `10` | 2^10 = 1024, matching the brief's 1024×1024. **Important**: these keys store the bit exponent, not the tile count — a common mistake to hard-code `1024` literally |
