@@ -86,7 +86,20 @@ _generate_content_commands() {
 	# digesting its own multi-thousand-line output to reliably process the
 	# `content select`/`content download` commands that followed. One
 	# filtered call per required item avoids that entirely.
+	#
+	# Phase 1: resolve every item's numeric ID first, *without* selecting
+	# anything yet, and collect them. Phase 2 below then issues every
+	# `content select` back-to-back, immediately before `content download`.
+	# This two-phase split exists because interleaving `content select`
+	# with further `content state` calls was observed, on a real live run,
+	# to silently lose most selections — only 4 of 9 correctly-resolved
+	# items actually got downloaded, with no error at all. The content
+	# server's internal numeric IDs are apparently not guaranteed stable
+	# across separate `content state` calls in the same session; issuing
+	# every select immediately before download (no further state queries
+	# in between) avoids relying on that stability. See docs/RESEARCH.md §3.
 	local content_id type item_name numeric_id start_line
+	local selected_ids=()
 	while IFS=$'\t' read -r content_id type item_name; do
 		[[ -n "$content_id" ]] || continue
 		if content_present "$data_dir" "$type" "$content_id"; then
@@ -112,7 +125,7 @@ _generate_content_commands() {
 		# "first match" — the same content_id can appear more than once,
 		# representing different historical versions).
 		# `|| true` is load-bearing: under `set -euo pipefail`, grep finding
-		# no match (a normal, expected outcome the `if` below already
+		# no match (a normal, expected outcome the code below already
 		# handles) makes the whole pipeline "fail", which would otherwise
 		# kill this entire subshell via `set -e` before it reaches that
 		# check — silently aborting mid-manifest with no error visible.
@@ -121,13 +134,19 @@ _generate_content_commands() {
 		# anywhere, because set -e's exit is exactly that quiet.
 		numeric_id="$(tail -n "+$((start_line + 1))" "$log_file" | grep -i ", ${content_id}," | head -n1 | awk -F', ' '{print $1}' || true)"
 		if [[ -n "$numeric_id" ]]; then
-			echo "content select ${numeric_id}"
+			selected_ids+=("$numeric_id")
 		else
 			echo "# WARNING: ${content_id} not found via 'content state ${item_name}' — server may not have it" >&2
 		fi
 	done < <(jq -r --argjson with_ai "$with_ai" \
 		'.content[] | select((.required == true or (.type == "ai" and $with_ai == 1)) and .source == "bananas") | [.content_id, (if .type == "game_script" then "game" else .type end), .name] | @tsv' \
 		"$manifest")
+
+	# Phase 2: select everything in one uninterrupted burst, then download.
+	local id
+	for id in "${selected_ids[@]+"${selected_ids[@]}"}"; do
+		echo "content select ${id}"
+	done
 
 	echo "content download"
 	_wait_log_idle "$log_file" 5 180

@@ -129,7 +129,18 @@ function Invoke-ContentDownload {
         # dedicated server too busy digesting its own multi-thousand-line
         # output to reliably process the commands that followed. One
         # filtered call per required item avoids that entirely.
+        #
+        # Phase 1: resolve every item's numeric ID first, *without*
+        # selecting anything yet. Phase 2 below issues every `content
+        # select` back-to-back, immediately before `content download`. This
+        # split exists because interleaving select with further content
+        # state calls was observed (Linux side live run) to silently lose
+        # most selections -- only 4 of 9 correctly-resolved items actually
+        # got downloaded, no error at all. The server's numeric IDs are
+        # apparently not guaranteed stable across separate content state
+        # calls in the same session.
         $required = Get-RequiredContent -Manifest $Manifest -IncludeAi:$WithAi
+        $selectedIds = [System.Collections.Generic.List[string]]::new()
         foreach ($item in $required) {
             $type = if ($item.type -eq 'game_script') { 'game' } else { $item.type }
             if (Test-ContentPresent -DataDir $DataDir -Type $type -ContentId $item.content_id) { continue }
@@ -149,10 +160,15 @@ function Invoke-ContentDownload {
             $pattern = ",\s*" + [regex]::Escape($item.content_id) + "\s*,"
             $row = $newLines | Where-Object { $_ -imatch $pattern } | Select-Object -First 1
             if ($row -and ($row -match '^(\d+),')) {
-                $proc.StandardInput.WriteLine("content select $($Matches[1])")
+                $selectedIds.Add($Matches[1])
             } else {
                 Write-Warning "content_id $($item.content_id) not found via 'content state $($item.name)' — server may not have it"
             }
+        }
+
+        # Phase 2: select everything in one uninterrupted burst, then download.
+        foreach ($id in $selectedIds) {
+            $proc.StandardInput.WriteLine("content select $id")
         }
 
         $proc.StandardInput.WriteLine('content download')
