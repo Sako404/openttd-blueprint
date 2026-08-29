@@ -1,0 +1,35 @@
+# OpenTTD Blueprint - do not commit user machine state or generated artifacts
+
+# Blueprint-managed backups (created next to the user's OpenTTD config)
+backups/
+*.backup/
+
+# Blueprint runtime/state files if generated inside the repo during dev/testing
+blueprint-state.json
+.blueprint-cache/
+
+# Downloaded/cached third-party content (never committed - see docs/ARCHITECTURE.md)
+.content-cache/
+*.tar
+*.grf
+
+# Test output
+tests/tmp/
+tests/output/
+*.bats.log
+
+# Editor / OS junk
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Local dev environment
+.env
+.env.*
+*.local
+
+# Node (for any local tooling, e.g. markdown/link linters)
+node_modules/
