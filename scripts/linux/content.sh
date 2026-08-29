@@ -230,12 +230,44 @@ download_required_content() {
 }
 
 # resolve_newgrf_filename <data_dir> <content_id> — print the .grf filename
-# found inside the downloaded tar for this content ID (first match).
+# found inside the downloaded tar for this content ID (first match), and
+# ensure that file is actually extracted as a loose file directly under
+# newgrf/ (flattened, no subdirectory).
+#
+# This extraction step is load-bearing, not cosmetic: verified live that
+# OpenTTD's plain-filename NewGRF resolution (GRFLoadConfig's
+# FioCheckFileExists fallback — see docs/RESEARCH.md §5) only finds a
+# loose file directly inside newgrf/. A file still packed inside
+# content_download/newgrf/*.tar, or extracted into a subdirectory of
+# newgrf/, is reported as "invalid NewGRF ... not found" and silently
+# dropped at game startup — despite the content having downloaded
+# successfully and the config line being syntactically correct. This was
+# only caught by an actual OpenTTD startup/stability check, not by any of
+# this project's own dry-run/verify/idempotency checks, which only
+# confirm the config *file* is well-formed, not that OpenTTD can load
+# what it references.
 resolve_newgrf_filename() {
-	local data_dir="$1" content_id="$2" tar_path
+	local data_dir="$1" content_id="$2" tar_path filename target tmp_dir extracted
 	tar_path="$(content_tar_path "$data_dir" "newgrf" "$content_id")"
 	[[ -n "$tar_path" ]] || return 1
-	tar -tf "$tar_path" | grep -i '\.grf$' | head -n1 | xargs -r basename
+	filename="$(tar -tf "$tar_path" | grep -i '\.grf$' | head -n1 | xargs -r basename)"
+	[[ -n "$filename" ]] || return 1
+
+	target="${data_dir}/newgrf/${filename}"
+	if [[ ! -f "$target" ]]; then
+		mkdir -p "${data_dir}/newgrf"
+		tmp_dir="$(mktemp -d)"
+		tar -xf "$tar_path" -C "$tmp_dir"
+		extracted="$(find "$tmp_dir" -iname '*.grf' | head -n1 || true)"
+		if [[ -z "$extracted" ]]; then
+			rm -rf "$tmp_dir"
+			return 1
+		fi
+		cp "$extracted" "$target"
+		rm -rf "$tmp_dir"
+	fi
+
+	echo "$filename"
 }
 
 # _resolve_registered_name <openttd_exe> <section_heading> <display_name>
@@ -312,7 +344,18 @@ build_gamescript_line() {
 		echo "build_gamescript_line: could not resolve registered name for '${display_name}'" >&2
 		return 1
 	}
-	printf '%s =\n' "$script_name"
+	# A [game_scripts]/[ai_players] cfg KEY containing a space must be
+	# quoted, or OpenTTD's own ini parser truncates it at the first space
+	# (verified live: an unquoted "Renewed Village Growth =" line loaded as
+	# just "Renewed", which OpenTTD then reported as an unknown script and
+	# dropped entirely — the config looked correct but the script silently
+	# never activated). Single-word names don't need this. See
+	# docs/RESEARCH.md §3.
+	if [[ "$script_name" == *" "* ]]; then
+		printf '"%s" =\n' "$script_name"
+	else
+		printf '%s =\n' "$script_name"
+	fi
 }
 
 # build_ai_players_lines <openttd_exe> <manifest_file> — print the
@@ -332,5 +375,10 @@ build_ai_players_lines() {
 		echo "build_ai_players_lines: could not resolve registered name for '${display_name}'" >&2
 		return 1
 	}
-	printf 'none =\n%s =\n' "$ai_name"
+	# See build_gamescript_line for why a space in the key needs quoting.
+	if [[ "$ai_name" == *" "* ]]; then
+		printf 'none =\n"%s" =\n' "$ai_name"
+	else
+		printf 'none =\n%s =\n' "$ai_name"
+	fi
 }

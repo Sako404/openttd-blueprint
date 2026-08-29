@@ -222,6 +222,21 @@ function Invoke-ContentDownload {
 }
 
 function Resolve-NewgrfFilename {
+    <#
+    .SYNOPSIS
+    Prints the .grf filename found inside the downloaded tar for this
+    content ID, and ensures that file is actually extracted as a loose
+    file directly under newgrf\ (flattened, no subdirectory).
+
+    .NOTES
+    This extraction is load-bearing, not cosmetic: verified live (Linux
+    side) that OpenTTD's plain-filename NewGRF resolution only finds a
+    loose file directly inside newgrf\. A file still packed inside
+    content_download\newgrf\*.tar, or extracted into a subdirectory, is
+    reported as "invalid NewGRF ... not found" and silently dropped at
+    game startup -- despite the content having downloaded successfully
+    and the config line being syntactically correct. See docs/RESEARCH.md §5.
+    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)][string]$DataDir,
@@ -232,7 +247,25 @@ function Resolve-NewgrfFilename {
     $entries = & tar -tf $tarPath
     $grf = $entries | Where-Object { $_ -imatch '\.grf$' } | Select-Object -First 1
     if (-not $grf) { return $null }
-    return (Split-Path -Leaf $grf)
+    $filename = Split-Path -Leaf $grf
+
+    $newgrfDir = Join-Path $DataDir 'newgrf'
+    $target = Join-Path $newgrfDir $filename
+    if (-not (Test-Path -LiteralPath $target)) {
+        New-Item -ItemType Directory -Force -Path $newgrfDir | Out-Null
+        $tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
+        New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
+        & tar -xf $tarPath -C $tmpDir
+        $extracted = Get-ChildItem -Path $tmpDir -Recurse -Filter '*.grf' | Select-Object -First 1
+        if (-not $extracted) {
+            Remove-Item -Recurse -Force $tmpDir
+            return $null
+        }
+        Copy-Item -LiteralPath $extracted.FullName -Destination $target -Force
+        Remove-Item -Recurse -Force $tmpDir
+    }
+
+    return $filename
 }
 
 function Resolve-RegisteredName {
@@ -323,6 +356,13 @@ function Build-GameScriptLine {
     if (-not $scriptName) {
         throw "Build-GameScriptLine: could not resolve registered name for '$($gs.name)'"
     }
+    # A [game_scripts]/[ai_players] cfg KEY containing a space must be
+    # quoted, or OpenTTD's own ini parser truncates it at the first space
+    # (verified live, Linux side: an unquoted "Renewed Village Growth ="
+    # line loaded as just "Renewed", silently dropped as unknown).
+    if ($scriptName.Contains(' ')) {
+        return @("`"$scriptName`" =")
+    }
     return @("$scriptName =")
 }
 
@@ -345,6 +385,10 @@ function Build-AiPlayersLines {
     $aiName = Resolve-AiName -Executable $Executable -DisplayName $ai.name
     if (-not $aiName) {
         throw "Build-AiPlayersLines: could not resolve registered name for '$($ai.name)'"
+    }
+    # See Build-GameScriptLine for why a space in the key needs quoting.
+    if ($aiName.Contains(' ')) {
+        return @('none =', "`"$aiName`" =")
     }
     return @('none =', "$aiName =")
 }
