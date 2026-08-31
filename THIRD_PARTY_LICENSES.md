@@ -18,6 +18,10 @@ system, from its original author, under that author's own licence.
 | OpenGFX+ Trees | GPL-2.0 | https://bananas.openttd.org/package/newgrf/46727806 |
 | ITL Houses | GPL-3.0 | https://github.com/2TallTyler/itl_houses |
 | Renewed Village Growth | GPL-2.0 | https://github.com/F1rrel/RenewedVillageGrowth |
+| RailwAI | GPL-3.0 | https://bananas.openttd.org/package/ai/52776169 |
+
+RailwAI is optional and only fetched with `--with-ai`; everything else
+listed above is part of the default profile.
 
 GPL-licensed NewGRF/Game Script content remains under GPL regardless of
 how it's acquired; OpenTTD Blueprint's AGPL licence covers only the

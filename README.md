@@ -4,10 +4,10 @@
 
 OpenTTD Blueprint does **not** redistribute OpenTTD. It works with an
 OpenTTD installation you already have (primarily Steam, on Linux or
-Windows), and safely downloads/configures a curated, version-pinned set of
-third-party NewGRFs and a Game Script through OpenTTD's own Online Content
-system — backing up your existing configuration first, and never touching
-your saves or unrelated content.
+Windows), and safely downloads/configures a curated set of third-party
+NewGRFs and a Game Script through OpenTTD's own Online Content system —
+backing up your existing configuration first, and never touching your
+saves or unrelated content.
 
 ## Why Blueprint?
 
@@ -22,6 +22,13 @@ script, get the same setup every time, on Linux or Windows.
 
 - One default profile (`logistics`) with a researched, documented NewGRF
   stack and Game Script — see `docs/MODS.md` for what and why.
+- The manifest records each item's identity, load order, parameters and
+  **last-tested version**. Acquisition goes through OpenTTD's console
+  `content` commands, which resolve an item against the catalogue as it
+  currently stands — so Blueprint reproduces the intended content set and
+  configuration, and does not guarantee an exact historical version of
+  every package. Diff what actually landed against the manifest's version
+  if that matters to you.
 - Content acquired exclusively through OpenTTD's own Online Content
   system — no scraping, no unofficial mirrors.
 - `openttd.cfg` is **patched**, never replaced: every value this project
