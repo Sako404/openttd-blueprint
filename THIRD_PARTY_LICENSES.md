@@ -1,6 +1,7 @@
 # Third-party licences
 
-OpenTTD Blueprint's own code is MIT-licensed (see `LICENSE`). This
+OpenTTD Blueprint's own code is licensed under AGPL-3.0-or-later (see
+`LICENSE` and `NOTICE`). This
 repository does not bundle any third-party binaries — all content listed
 below is downloaded at install time through OpenTTD's own Online Content
 system, from its original author, under that author's own licence.
@@ -19,7 +20,7 @@ system, from its original author, under that author's own licence.
 | Renewed Village Growth | GPL-2.0 | https://github.com/F1rrel/RenewedVillageGrowth |
 
 GPL-licensed NewGRF/Game Script content remains under GPL regardless of
-how it's acquired; OpenTTD Blueprint's MIT licence covers only the
+how it's acquired; OpenTTD Blueprint's AGPL licence covers only the
 installer code, manifests and documentation in this repository. See
 `docs/MODS.md` for what each item does and why it was selected, including
 alternatives considered and rejected.

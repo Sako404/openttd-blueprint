@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-31
+
+### Changed
+
+- **Licence: MIT → GNU AGPL-3.0-or-later** for OpenTTD Blueprint's own
+  code, manifests and documentation. Releases up to and including 0.1.0
+  remain MIT; those grants are not revoked. The change applies from this
+  release onward.
+- `LICENSE` now carries the official AGPL text verbatim. The scope note
+  that previously lived appended to the MIT text moved to `NOTICE`, which
+  keeps the licence file detectable and the boundary explicit.
+
+### Added
+
+- `NOTICE` — copyright, official upstream, and the explicit statement that
+  the AGPL covers this project's own work only and does not relicense
+  OpenTTD or any third-party content Blueprint causes to be downloaded.
+- `AUTHORS`.
+- README: a project status and affiliation section stating plainly that
+  OpenTTD Blueprint is an independent project, not an official OpenTTD
+  project, and not affiliated with or endorsed by it.
+- `CONTRIBUTING.md`: contribution licensing under AGPL (no CLA, no DCO),
+  a rule that no third-party content or private machine data belongs in
+  the repository, both-platform test guidance, and the upstream link.
+
+### Note
+
+No functional change to the installers in this release — it establishes the
+project's open-source and governance baseline.
+
 ## [0.1.0] - 2026-08-29
 
 ### Added

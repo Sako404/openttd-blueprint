@@ -235,10 +235,26 @@ See `CONTRIBUTING.md`.
 ## Licence
 
 OpenTTD Blueprint's own code (installers, scripts, manifests,
-documentation) is MIT-licensed — see `LICENSE`. This does **not** extend
-to OpenTTD itself (GPL v2) or to any NewGRF/Game Script this project
-downloads or configures, which remain under their respective authors'
-licences. See `docs/MODS.md` and `THIRD_PARTY_LICENSES.md`.
+documentation) is licensed under the **GNU Affero General Public License,
+version 3 or later** — see `LICENSE` and `NOTICE`.
+
+That covers this project's own work only. It does **not** extend to, and
+does not relicense, OpenTTD itself (GPL v2) or any NewGRF, Game Script, AI,
+baseset, graphics or sound this project causes to be downloaded or
+configured. Those remain under their own authors' licences regardless of
+how Blueprint causes them to be acquired. See `docs/MODS.md` and
+`THIRD_PARTY_LICENSES.md`.
+
+Releases up to and including `v0.1.0` were published under the MIT licence.
+From `v0.2.0` onward the project is AGPL-3.0-or-later. That changes the
+terms for new releases only — it does not revoke the MIT rights already
+granted for `v0.1.0`.
+
+## Project status and affiliation
+
+OpenTTD Blueprint is an independent project built for use with OpenTTD. It
+is **not an official OpenTTD project**, and is not affiliated with or
+endorsed by the OpenTTD project.
 
 ## Third-party content and licences
 

@@ -42,7 +42,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$BpVersion = '0.1.0'
+$BpVersion = '0.2.0'
 $BpRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 . (Join-Path $BpRoot 'scripts\common\Manifest.ps1')

@@ -1,0 +1,47 @@
+OpenTTD Blueprint
+Copyright (C) 2026 Marcin Sakowski
+
+Official upstream: https://github.com/Sako404/openttd-blueprint
+
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or (at your
+option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public
+License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+--------------------------------------------------------------------------
+Scope of this licence
+--------------------------------------------------------------------------
+
+The AGPL above covers OpenTTD Blueprint's OWN work only:
+
+  - the installer and orchestration scripts (Bash and PowerShell)
+  - the profiles and manifests authored for this project
+  - the documentation authored for this project
+
+It does NOT apply to, and does not relicense:
+
+  - OpenTTD itself (GNU GPL v2) — https://github.com/OpenTTD/OpenTTD
+  - any NewGRF, Game Script, AI, baseset, graphics, sound or music, or
+    other third-party content that OpenTTD Blueprint causes to be
+    downloaded or configured
+
+That content remains under its own author's licence regardless of how
+OpenTTD Blueprint causes it to be acquired. This repository bundles none
+of it — everything is fetched at install time through OpenTTD's own
+Online Content system, from its original source.
+
+See THIRD_PARTY_LICENSES.md and docs/MODS.md.
+
+--------------------------------------------------------------------------
+
+OpenTTD Blueprint is an independent project built for use with OpenTTD.
+It is not an official OpenTTD project, and is not affiliated with or
+endorsed by the OpenTTD project.
